@@ -2,8 +2,9 @@
 
 import { useState, Suspense } from "react";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
+import { signIn, useSession } from "next-auth/react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 
@@ -72,6 +73,19 @@ function LoginForm() {
 }
 
 export default function LoginPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace("/account");
+    }
+  }, [status, router]);
+
+  if (status === "loading" || status === "authenticated") {
+    return <main style={{ minHeight: "100vh", background: "#0d1117" }} />;
+  }
+
   return (
     <main style={{ minHeight: "100vh", background: "#0d1117" }}>
       <Navbar />
