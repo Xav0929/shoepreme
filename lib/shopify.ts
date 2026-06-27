@@ -134,8 +134,8 @@ export async function createCart(
 ) {
   const mutation = `
     ${CART_FRAGMENT}
-    mutation CartCreate($lines: [CartLineInput!]) {
-      cartCreate(input: { lines: $lines }) {
+      mutation CartCreate($lines: [CartLineInput!]) {
+      cartCreate(input: { lines: $lines, buyerIdentity: { countryCode: PH } }) {
         cart { ...CartFragment }
         userErrors { field message }
       }

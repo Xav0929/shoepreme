@@ -65,7 +65,7 @@ export default function AdminLayout({
           flexShrink: 0,
           background: "#0d1017",
           borderRight: "1px solid rgba(255,255,255,0.055)",
-          position: "sticky",
+          position: "fixed",
           top: 0,
           height: "100vh",
           display: "flex",
@@ -73,40 +73,50 @@ export default function AdminLayout({
         }}
       >
         {/* Logo */}
-        <div style={{ padding: "28px 22px 24px" }}>
-          <p
+        <div style={{ padding: "20px 22px 18px" }}>
+          <Link
+            href="/"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              textDecoration: "none",
+              marginBottom: 8,
+            }}
+          >
+            <img
+              src="/logo.png"
+              alt="Shoepreme"
+              width={28}
+              height={28}
+              style={{ objectFit: "contain" }}
+            />
+            <span
+              style={{
+                fontFamily: "Bebas Neue, sans-serif",
+                fontSize: "1.4rem",
+                letterSpacing: "0.08em",
+                color: "#f0f4f8",
+              }}
+            >
+              SHOEPREME
+            </span>
+          </Link>
+          {/* <p
             style={{
               fontFamily: "monospace",
               fontSize: 8,
               fontWeight: 700,
-              letterSpacing: "0.22em",
+              letterSpacing: "0.18em",
               textTransform: "uppercase",
               color: "rgba(240,244,248,0.25)",
-              margin: "0 0 3px",
+              margin: "0 0 10px",
             }}
           >
-            Shoepreme PH
-          </p>
-          <h2
-            style={{
-              fontFamily: "Bebas Neue, sans-serif",
-              fontSize: "1.75rem",
-              letterSpacing: "0.04em",
-              color: "#f0f4f8",
-              margin: 0,
-            }}
-          >
-            Admin
-          </h2>
-          <div
-            style={{
-              marginTop: 10,
-              height: 1,
-              background: "rgba(255,255,255,0.05)",
-            }}
-          />
+            Admin Panel
+          </p> */}
+          <div style={{ height: 1, background: "rgba(255,255,255,0.05)" }} />
         </div>
-
         {/* Nav */}
         <nav
           style={{
@@ -282,7 +292,9 @@ export default function AdminLayout({
         </div>
       </aside>
 
-      <main style={{ flex: 1, minWidth: 0, overflowX: "auto" }}>
+      <main
+        style={{ flex: 1, minWidth: 0, overflowX: "auto", marginLeft: 220 }}
+      >
         {children}
       </main>
     </div>

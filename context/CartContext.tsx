@@ -146,7 +146,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const checkout = useCallback(() => {
     if (cart?.checkoutUrl) {
-      window.location.href = cart.checkoutUrl;
+      const url = new URL(cart.checkoutUrl);
+      url.searchParams.set(
+        "return_to",
+        process.env.NEXT_PUBLIC_APP_URL ?? "https://shoepreme.vercel.app",
+      );
+      window.location.href = url.toString();
     }
   }, [cart]);
 
