@@ -1,0 +1,2520 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+type Section = "orders" | "addresses" | "recently-viewed" | "profile";
+
+interface CustomerData {
+  displayName: string;
+  email?: string;
+  phone?: string;
+  numberOfOrders?: number;
+}
+
+interface AccountClientProps {
+  customer: CustomerData;
+  SignOutButton: React.ReactNode;
+}
+
+// ─── Mock Orders ──────────────────────────────────────────────────────────────
+const MOCK_ORDERS = [
+  {
+    id: "gid://shopify/Order/1001",
+    orderNumber: 1001,
+    processedAt: "2025-05-12T10:30:00Z",
+    financialStatus: "PAID",
+    fulfillmentStatus: "FULFILLED",
+    currentTotalPrice: { amount: "8950.00", currencyCode: "PHP" },
+    subtotalPrice: { amount: "8500.00", currencyCode: "PHP" },
+    totalShippingPrice: { amount: "450.00", currencyCode: "PHP" },
+    shippingAddress: {
+      firstName: "Marc",
+      lastName: "Yuri",
+      address1: "123 Rizal St.",
+      address2: "Brgy. Poblacion",
+      city: "Koronadal",
+      province: "South Cotabato",
+      zip: "9506",
+      country: "Philippines",
+      phone: "+639123456789",
+    },
+    lineItems: {
+      edges: [
+        {
+          node: {
+            title: "Nike Air Jordan 1 Retro High OG",
+            quantity: 1,
+            variant: {
+              image: {
+                url: "https://placehold.co/120x120/1a2332/4a7fa5?text=AJ1",
+              },
+              selectedOptions: [
+                { name: "Size", value: "US 10" },
+                { name: "Color", value: "Chicago" },
+              ],
+              price: { amount: "7500.00", currencyCode: "PHP" },
+            },
+          },
+        },
+        {
+          node: {
+            title: "Nike Dunk Low Retro",
+            quantity: 1,
+            variant: {
+              image: {
+                url: "https://placehold.co/120x120/1a2332/4a7fa5?text=DUNK",
+              },
+              selectedOptions: [
+                { name: "Size", value: "US 10" },
+                { name: "Color", value: "Panda" },
+              ],
+              price: { amount: "1000.00", currencyCode: "PHP" },
+            },
+          },
+        },
+      ],
+    },
+  },
+  {
+    id: "gid://shopify/Order/1002",
+    orderNumber: 1002,
+    processedAt: "2025-06-01T14:20:00Z",
+    financialStatus: "PENDING",
+    fulfillmentStatus: "UNFULFILLED",
+    currentTotalPrice: { amount: "12500.00", currencyCode: "PHP" },
+    subtotalPrice: { amount: "12050.00", currencyCode: "PHP" },
+    totalShippingPrice: { amount: "450.00", currencyCode: "PHP" },
+    shippingAddress: {
+      firstName: "Marc",
+      lastName: "Yuri",
+      address1: "456 Mabini Ave.",
+      address2: null,
+      city: "General Santos",
+      province: "South Cotabato",
+      zip: "9500",
+      country: "Philippines",
+      phone: "+639123456789",
+    },
+    lineItems: {
+      edges: [
+        {
+          node: {
+            title: "Adidas Yeezy Boost 350 V2",
+            quantity: 1,
+            variant: {
+              image: {
+                url: "https://placehold.co/120x120/1a2332/e8a830?text=YEEZY",
+              },
+              selectedOptions: [
+                { name: "Size", value: "US 9.5" },
+                { name: "Color", value: "Zebra" },
+              ],
+              price: { amount: "12050.00", currencyCode: "PHP" },
+            },
+          },
+        },
+      ],
+    },
+  },
+  {
+    id: "gid://shopify/Order/1003",
+    orderNumber: 1003,
+    processedAt: "2025-06-20T09:00:00Z",
+    financialStatus: "REFUNDED",
+    fulfillmentStatus: "UNFULFILLED",
+    currentTotalPrice: { amount: "0.00", currencyCode: "PHP" },
+    subtotalPrice: { amount: "5500.00", currencyCode: "PHP" },
+    totalShippingPrice: { amount: "450.00", currencyCode: "PHP" },
+    shippingAddress: {
+      firstName: "Marc",
+      lastName: "Yuri",
+      address1: "789 Del Pilar St.",
+      address2: null,
+      city: "Koronadal",
+      province: "South Cotabato",
+      zip: "9506",
+      country: "Philippines",
+      phone: "+639123456789",
+    },
+    lineItems: {
+      edges: [
+        {
+          node: {
+            title: "New Balance 550",
+            quantity: 1,
+            variant: {
+              image: {
+                url: "https://placehold.co/120x120/1a2332/4a7fa5?text=NB550",
+              },
+              selectedOptions: [
+                { name: "Size", value: "US 11" },
+                { name: "Color", value: "White/Green" },
+              ],
+              price: { amount: "5500.00", currencyCode: "PHP" },
+            },
+          },
+        },
+      ],
+    },
+  },
+];
+
+// ─── Mock Addresses ───────────────────────────────────────────────────────────
+const MOCK_ADDRESSES = [
+  {
+    id: "addr_1",
+    firstName: "Marc",
+    lastName: "Yuri",
+    address1: "123 Rizal St.",
+    address2: "Brgy. Poblacion",
+    city: "Koronadal",
+    province: "South Cotabato",
+    zip: "9506",
+    country: "Philippines",
+    phone: "+639123456789",
+    isDefault: true,
+  },
+  {
+    id: "addr_2",
+    firstName: "Marc",
+    lastName: "Yuri",
+    address1: "456 Mabini Ave.",
+    address2: "",
+    city: "General Santos",
+    province: "South Cotabato",
+    zip: "9500",
+    country: "Philippines",
+    phone: "+639123456789",
+    isDefault: false,
+  },
+];
+
+type Address = (typeof MOCK_ADDRESSES)[number];
+type Order = (typeof MOCK_ORDERS)[number];
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const STATUS_COLORS: Record<string, string> = {
+  PAID: "#4ade80",
+  PENDING: "#e8a830",
+  REFUNDED: "#f87171",
+  FULFILLED: "#4a7fa5",
+  UNFULFILLED: "rgba(245,247,249,0.4)",
+  PARTIALLY_FULFILLED: "#e8a830",
+  IN_PROGRESS: "#e8a830",
+};
+
+function statusColor(label: string) {
+  return STATUS_COLORS[label?.toUpperCase()] ?? "rgba(245,247,249,0.4)";
+}
+
+function formatPrice(amount: string, currency: string) {
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 0,
+  }).format(parseFloat(amount));
+}
+
+function formatDate(iso: string, long = false) {
+  return new Date(iso).toLocaleDateString("en-PH", {
+    year: "numeric",
+    month: long ? "long" : "short",
+    day: "numeric",
+  });
+}
+
+// ─── StatusBadge ─────────────────────────────────────────────────────────────
+function StatusBadge({ label }: { label: string }) {
+  const c = statusColor(label);
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "5px",
+        fontFamily: "monospace",
+        fontSize: "9px",
+        fontWeight: 700,
+        letterSpacing: "0.14em",
+        textTransform: "uppercase",
+        color: c,
+        background: `${c}18`,
+        border: `1px solid ${c}40`,
+        borderRadius: "6px",
+        padding: "3px 8px",
+        whiteSpace: "nowrap",
+      }}
+    >
+      <span
+        style={{
+          width: "5px",
+          height: "5px",
+          borderRadius: "50%",
+          background: c,
+          flexShrink: 0,
+        }}
+      />
+      {label}
+    </span>
+  );
+}
+
+// ─── Nav Items ────────────────────────────────────────────────────────────────
+const NAV_ITEMS: { key: Section; label: string; icon: React.ReactNode }[] = [
+  {
+    key: "orders",
+    label: "Orders",
+    icon: (
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+      </svg>
+    ),
+  },
+  {
+    key: "addresses",
+    label: "Addresses",
+    icon: (
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+        <circle cx="12" cy="10" r="3" />
+      </svg>
+    ),
+  },
+  {
+    key: "profile",
+    label: "Profile",
+    icon: (
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+        <circle cx="12" cy="7" r="4" />
+      </svg>
+    ),
+  },
+];
+
+// ─── Order Tabs ───────────────────────────────────────────────────────────────
+const ORDER_TABS: {
+  key: string;
+  label: string;
+  filter: (o: Order) => boolean;
+}[] = [
+  { key: "all", label: "All", filter: () => true },
+  {
+    key: "to-pay",
+    label: "To Pay",
+    filter: (o) => o.financialStatus === "PENDING",
+  },
+  {
+    key: "to-ship",
+    label: "To Ship",
+    filter: (o) =>
+      o.financialStatus === "PAID" && o.fulfillmentStatus === "UNFULFILLED",
+  },
+  {
+    key: "to-receive",
+    label: "To Receive",
+    filter: (o) =>
+      o.fulfillmentStatus === "FULFILLED" && o.financialStatus === "PAID",
+  },
+  {
+    key: "completed",
+    label: "Completed",
+    filter: (o) =>
+      o.fulfillmentStatus === "FULFILLED" && o.financialStatus === "PAID",
+  },
+  {
+    key: "cancelled",
+    label: "Cancelled",
+    filter: (o) => o.financialStatus === "REFUNDED",
+  },
+];
+
+// ─── Order List ───────────────────────────────────────────────────────────────
+function OrdersSection({ onSelect }: { onSelect: (order: Order) => void }) {
+  const [activeTab, setActiveTab] = useState("all");
+  const allOrders = MOCK_ORDERS;
+  const tab = ORDER_TABS.find((t) => t.key === activeTab)!;
+  const orders = allOrders.filter(tab.filter);
+
+  if (orders.length === 0 && allOrders.length === 0) {
+    return (
+      <div
+        style={{
+          background: "rgba(255,255,255,0.02)",
+          border: "1px solid rgba(255,255,255,0.07)",
+          borderRadius: "16px",
+          padding: "56px 24px",
+          textAlign: "center",
+        }}
+      >
+        <p
+          style={{
+            fontFamily: "Bebas Neue, sans-serif",
+            fontSize: "1.6rem",
+            letterSpacing: "0.08em",
+            color: "rgba(245,247,249,0.15)",
+            margin: "0 0 8px",
+          }}
+        >
+          No orders yet.
+        </p>
+        <p
+          style={{
+            fontFamily: "monospace",
+            fontSize: "10px",
+            color: "rgba(245,247,249,0.25)",
+            letterSpacing: "0.08em",
+            margin: 0,
+          }}
+        >
+          Your order history will appear here once you make a purchase.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      {/* ── Tabs ── */}
+      <div
+        style={{
+          display: "flex",
+          borderBottom: "1px solid rgba(255,255,255,0.07)",
+          overflowX: "auto",
+          scrollbarWidth: "none",
+          gap: "0",
+          marginBottom: "4px",
+        }}
+      >
+        {ORDER_TABS.map((t) => {
+          const count = allOrders.filter(t.filter).length;
+          const isActive = activeTab === t.key;
+          return (
+            <button
+              key={t.key}
+              onClick={() => setActiveTab(t.key)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "10px 18px",
+                border: "none",
+                borderBottom: isActive
+                  ? "2px solid #e8a830"
+                  : "2px solid transparent",
+                marginBottom: "-1px",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+                background: "transparent",
+                color: isActive ? "#e8a830" : "rgba(245,247,249,0.35)",
+                fontFamily: "monospace",
+                fontSize: "9px",
+                fontWeight: 700,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                transition: "color 0.15s",
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive)
+                  (e.currentTarget as HTMLButtonElement).style.color =
+                    "rgba(245,247,249,0.65)";
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive)
+                  (e.currentTarget as HTMLButtonElement).style.color =
+                    "rgba(245,247,249,0.35)";
+              }}
+            >
+              {t.label}
+              {count > 0 && (
+                <span
+                  style={{
+                    background: isActive
+                      ? "rgba(232,168,48,0.15)"
+                      : "rgba(255,255,255,0.05)",
+                    color: isActive ? "#e8a830" : "rgba(245,247,249,0.25)",
+                    borderRadius: "20px",
+                    padding: "1px 7px",
+                    fontSize: "8px",
+                    fontWeight: 800,
+                    letterSpacing: "0.06em",
+                  }}
+                >
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── Empty filtered state ── */}
+      {orders.length === 0 && (
+        <div
+          style={{
+            background: "rgba(255,255,255,0.02)",
+            border: "1px solid rgba(255,255,255,0.07)",
+            borderRadius: "16px",
+            padding: "48px 24px",
+            textAlign: "center",
+          }}
+        >
+          <p
+            style={{
+              fontFamily: "Bebas Neue, sans-serif",
+              fontSize: "1.4rem",
+              letterSpacing: "0.08em",
+              color: "rgba(245,247,249,0.12)",
+              margin: "0 0 6px",
+            }}
+          >
+            No {tab.label} orders.
+          </p>
+          <p
+            style={{
+              fontFamily: "monospace",
+              fontSize: "10px",
+              color: "rgba(245,247,249,0.2)",
+              letterSpacing: "0.06em",
+              margin: 0,
+            }}
+          >
+            Nothing here yet.
+          </p>
+        </div>
+      )}
+
+      {/* ── Order rows ── */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+        {orders.map((order) => {
+          const items = order.lineItems.edges.map((e) => e.node);
+          const firstImage = items[0]?.variant?.image?.url;
+          return (
+            <button
+              key={order.id}
+              onClick={() => onSelect(order)}
+              style={{
+                background: "rgba(255,255,255,0.02)",
+                border: "1px solid rgba(255,255,255,0.07)",
+                borderRadius: "14px",
+                padding: "18px 20px",
+                display: "flex",
+                gap: "16px",
+                alignItems: "center",
+                flexWrap: "wrap",
+                cursor: "pointer",
+                textAlign: "left",
+                width: "100%",
+                transition: "border-color 0.15s, background 0.15s",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.borderColor =
+                  "rgba(232,168,48,0.3)";
+                (e.currentTarget as HTMLButtonElement).style.background =
+                  "rgba(232,168,48,0.03)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.borderColor =
+                  "rgba(255,255,255,0.07)";
+                (e.currentTarget as HTMLButtonElement).style.background =
+                  "rgba(255,255,255,0.02)";
+              }}
+            >
+              <div
+                style={{
+                  width: "56px",
+                  height: "56px",
+                  borderRadius: "10px",
+                  background: "rgba(74,127,165,0.1)",
+                  border: "1px solid rgba(74,127,165,0.2)",
+                  flexShrink: 0,
+                  overflow: "hidden",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {firstImage ? (
+                  <img
+                    src={firstImage}
+                    alt=""
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : (
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="rgba(74,127,165,0.5)"
+                    strokeWidth="1.5"
+                  >
+                    <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  </svg>
+                )}
+              </div>
+              <div style={{ flex: 1, minWidth: "160px" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    flexWrap: "wrap",
+                    marginBottom: "6px",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: "Bebas Neue, sans-serif",
+                      fontSize: "1rem",
+                      letterSpacing: "0.08em",
+                      color: "#f5f7f9",
+                    }}
+                  >
+                    Order #{order.orderNumber}
+                  </span>
+                  <StatusBadge label={order.financialStatus} />
+                  <StatusBadge label={order.fulfillmentStatus} />
+                </div>
+                <p
+                  style={{
+                    fontFamily: "monospace",
+                    fontSize: "10px",
+                    color: "rgba(245,247,249,0.35)",
+                    letterSpacing: "0.06em",
+                    margin: "0 0 4px",
+                  }}
+                >
+                  {formatDate(order.processedAt)} · {items.length} item
+                  {items.length !== 1 ? "s" : ""}
+                </p>
+                <p
+                  style={{
+                    fontFamily: "monospace",
+                    fontSize: "10px",
+                    color: "rgba(245,247,249,0.5)",
+                    letterSpacing: "0.04em",
+                    margin: 0,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    maxWidth: "300px",
+                  }}
+                >
+                  {items
+                    .slice(0, 2)
+                    .map((i) => i.title)
+                    .join(", ")}
+                  {items.length > 2 && ` +${items.length - 2} more`}
+                </p>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  flexShrink: 0,
+                }}
+              >
+                <p
+                  style={{
+                    fontFamily: "Bebas Neue, sans-serif",
+                    fontSize: "1.3rem",
+                    letterSpacing: "0.06em",
+                    color: "#e8a830",
+                    margin: 0,
+                  }}
+                >
+                  {formatPrice(
+                    order.currentTotalPrice.amount,
+                    order.currentTotalPrice.currencyCode,
+                  )}
+                </p>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="rgba(245,247,249,0.25)"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Order Detail (inline panel) ──────────────────────────────────────────────
+function OrderDetail({ order }: { order: Order }) {
+  const items = order.lineItems.edges.map((e) => e.node);
+  const addr = order.shippingAddress;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
+      {/* Items */}
+      <div>
+        <p
+          style={{
+            fontFamily: "monospace",
+            fontSize: "9px",
+            fontWeight: 800,
+            letterSpacing: "0.22em",
+            textTransform: "uppercase",
+            color: "rgba(245,247,249,0.3)",
+            margin: "0 0 12px",
+          }}
+        >
+          Items ({items.length})
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          {items.map((item, i) => (
+            <div
+              key={i}
+              style={{
+                display: "flex",
+                gap: "16px",
+                alignItems: "center",
+                background: "rgba(255,255,255,0.02)",
+                border: "1px solid rgba(255,255,255,0.06)",
+                borderRadius: "14px",
+                padding: "16px",
+              }}
+            >
+              <div
+                style={{
+                  width: "64px",
+                  height: "64px",
+                  borderRadius: "10px",
+                  overflow: "hidden",
+                  flexShrink: 0,
+                  background: "rgba(74,127,165,0.1)",
+                  border: "1px solid rgba(74,127,165,0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {item.variant?.image?.url ? (
+                  <img
+                    src={item.variant.image.url}
+                    alt={item.title}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : (
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="rgba(74,127,165,0.5)"
+                    strokeWidth="1.5"
+                  >
+                    <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  </svg>
+                )}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p
+                  style={{
+                    fontFamily: "Poppins, sans-serif",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    color: "#f5f7f9",
+                    margin: "0 0 4px",
+                  }}
+                >
+                  {item.title}
+                </p>
+                <p
+                  style={{
+                    fontFamily: "monospace",
+                    fontSize: "10px",
+                    color: "rgba(245,247,249,0.4)",
+                    margin: "0 0 3px",
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  {item.variant?.selectedOptions
+                    ?.map((o) => o.value)
+                    .join(" · ")}
+                </p>
+                <p
+                  style={{
+                    fontFamily: "monospace",
+                    fontSize: "9px",
+                    color: "rgba(245,247,249,0.25)",
+                    margin: 0,
+                  }}
+                >
+                  Qty: {item.quantity}
+                </p>
+              </div>
+              <p
+                style={{
+                  fontFamily: "Bebas Neue, sans-serif",
+                  fontSize: "1.1rem",
+                  letterSpacing: "0.06em",
+                  color: "#e8a830",
+                  margin: 0,
+                  flexShrink: 0,
+                }}
+              >
+                {item.variant?.price
+                  ? formatPrice(
+                      (
+                        parseFloat(item.variant.price.amount) * item.quantity
+                      ).toString(),
+                      item.variant.price.currencyCode,
+                    )
+                  : "—"}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Address + Summary */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+          gap: "16px",
+        }}
+      >
+        {addr && (
+          <div>
+            <p
+              style={{
+                fontFamily: "monospace",
+                fontSize: "9px",
+                fontWeight: 800,
+                letterSpacing: "0.22em",
+                textTransform: "uppercase",
+                color: "rgba(245,247,249,0.3)",
+                margin: "0 0 12px",
+              }}
+            >
+              Shipping Address
+            </p>
+            <div
+              style={{
+                background: "rgba(255,255,255,0.02)",
+                border: "1px solid rgba(255,255,255,0.06)",
+                borderRadius: "14px",
+                padding: "18px 20px",
+                display: "flex",
+                gap: "12px",
+              }}
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="rgba(232,168,48,0.6)"
+                strokeWidth="2"
+                style={{ marginTop: "2px", flexShrink: 0 }}
+              >
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+              <div>
+                <p
+                  style={{
+                    fontFamily: "Poppins, sans-serif",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    color: "#f5f7f9",
+                    margin: "0 0 5px",
+                  }}
+                >
+                  {addr.firstName} {addr.lastName}
+                </p>
+                <p
+                  style={{
+                    fontFamily: "monospace",
+                    fontSize: "10px",
+                    color: "rgba(245,247,249,0.4)",
+                    margin: "0 0 2px",
+                    letterSpacing: "0.03em",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {addr.address1}
+                  {addr.address2 ? `, ${addr.address2}` : ""}
+                </p>
+                <p
+                  style={{
+                    fontFamily: "monospace",
+                    fontSize: "10px",
+                    color: "rgba(245,247,249,0.4)",
+                    margin: "0 0 2px",
+                    letterSpacing: "0.03em",
+                  }}
+                >
+                  {addr.city}, {addr.province} {addr.zip}
+                </p>
+                <p
+                  style={{
+                    fontFamily: "monospace",
+                    fontSize: "10px",
+                    color: "rgba(245,247,249,0.3)",
+                    margin: 0,
+                    letterSpacing: "0.03em",
+                  }}
+                >
+                  {addr.phone}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        <div>
+          <p
+            style={{
+              fontFamily: "monospace",
+              fontSize: "9px",
+              fontWeight: 800,
+              letterSpacing: "0.22em",
+              textTransform: "uppercase",
+              color: "rgba(245,247,249,0.3)",
+              margin: "0 0 12px",
+            }}
+          >
+            Summary
+          </p>
+          <div
+            style={{
+              background: "rgba(255,255,255,0.02)",
+              border: "1px solid rgba(255,255,255,0.06)",
+              borderRadius: "14px",
+              padding: "18px 20px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "12px",
+            }}
+          >
+            {[
+              { label: "Subtotal", value: order.subtotalPrice },
+              { label: "Shipping", value: order.totalShippingPrice },
+            ].map(({ label, value }) =>
+              value ? (
+                <div
+                  key={label}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: "monospace",
+                      fontSize: "10px",
+                      color: "rgba(245,247,249,0.35)",
+                      letterSpacing: "0.08em",
+                    }}
+                  >
+                    {label}
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: "monospace",
+                      fontSize: "11px",
+                      color: "rgba(245,247,249,0.6)",
+                    }}
+                  >
+                    {formatPrice(value.amount, value.currencyCode)}
+                  </span>
+                </div>
+              ) : null,
+            )}
+            <div
+              style={{ height: "1px", background: "rgba(255,255,255,0.06)" }}
+            />
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "10px",
+                  fontWeight: 800,
+                  letterSpacing: "0.14em",
+                  textTransform: "uppercase",
+                  color: "rgba(245,247,249,0.5)",
+                }}
+              >
+                Total
+              </span>
+              <span
+                style={{
+                  fontFamily: "Bebas Neue, sans-serif",
+                  fontSize: "1.5rem",
+                  letterSpacing: "0.06em",
+                  color: "#e8a830",
+                }}
+              >
+                {formatPrice(
+                  order.currentTotalPrice.amount,
+                  order.currentTotalPrice.currencyCode,
+                )}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Track CTA */}
+      <button
+        style={{
+          width: "100%",
+          padding: "16px",
+          background: "rgba(232,168,48,0.08)",
+          border: "1px solid rgba(232,168,48,0.25)",
+          borderRadius: "12px",
+          color: "#e8a830",
+          fontFamily: "monospace",
+          fontSize: "10px",
+          fontWeight: 700,
+          letterSpacing: "0.2em",
+          textTransform: "uppercase",
+          cursor: "pointer",
+        }}
+      >
+        Track Order →
+      </button>
+    </div>
+  );
+}
+
+// ─── Address Form Drawer ──────────────────────────────────────────────────────
+function AddressFormDrawer({
+  address,
+  onClose,
+  onSave,
+}: {
+  address: Address | null;
+  onClose: () => void;
+  onSave: (data: Omit<Address, "id" | "isDefault">) => void;
+}) {
+  const [form, setForm] = useState({
+    firstName: address?.firstName ?? "",
+    lastName: address?.lastName ?? "",
+    address1: address?.address1 ?? "",
+    address2: address?.address2 ?? "",
+    city: address?.city ?? "",
+    province: address?.province ?? "",
+    zip: address?.zip ?? "",
+    country: address?.country ?? "Philippines",
+    phone: address?.phone ?? "",
+  });
+  const isEditing = !!address;
+  const inputStyle = {
+    width: "100%",
+    background: "rgba(255,255,255,0.04)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: "8px",
+    padding: "10px 14px",
+    color: "#f5f7f9",
+    fontFamily: "monospace",
+    fontSize: "11px",
+    letterSpacing: "0.04em",
+    outline: "none",
+    boxSizing: "border-box" as const,
+  };
+  const labelStyle = {
+    fontFamily: "monospace",
+    fontSize: "8px",
+    fontWeight: 800,
+    letterSpacing: "0.22em",
+    textTransform: "uppercase" as const,
+    color: "rgba(245,247,249,0.3)",
+    display: "block",
+    marginBottom: "6px",
+  };
+
+  return (
+    <>
+      <div
+        onClick={onClose}
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.7)",
+          backdropFilter: "blur(4px)",
+          zIndex: 99998,
+        }}
+      />
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          right: 0,
+          bottom: 0,
+          width: "min(480px, 100vw)",
+          background: "#0d1117",
+          borderLeft: "1px solid rgba(255,255,255,0.08)",
+          zIndex: 99999,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "24px 28px",
+            borderBottom: "1px solid rgba(255,255,255,0.06)",
+            flexShrink: 0,
+          }}
+        >
+          <div>
+            <p
+              style={{
+                fontFamily: "monospace",
+                fontSize: "9px",
+                fontWeight: 800,
+                letterSpacing: "0.28em",
+                textTransform: "uppercase",
+                color: "rgba(245,247,249,0.3)",
+                margin: "0 0 4px",
+              }}
+            >
+              {isEditing ? "Edit Address" : "New Address"}
+            </p>
+            <h2
+              style={{
+                fontFamily: "Bebas Neue, sans-serif",
+                fontSize: "1.8rem",
+                letterSpacing: "0.06em",
+                color: "#f5f7f9",
+                margin: 0,
+              }}
+            >
+              {isEditing ? "Update Details" : "Add Address"}
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              width: "36px",
+              height: "36px",
+              borderRadius: "8px",
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              color: "rgba(245,247,249,0.5)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "18px",
+            }}
+          >
+            ✕
+          </button>
+        </div>
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "24px 28px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "16px",
+          }}
+        >
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "12px",
+            }}
+          >
+            <div>
+              <label style={labelStyle}>First Name</label>
+              <input
+                style={inputStyle}
+                value={form.firstName}
+                onChange={(e) =>
+                  setForm({ ...form, firstName: e.target.value })
+                }
+                placeholder="Marc"
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Last Name</label>
+              <input
+                style={inputStyle}
+                value={form.lastName}
+                onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+                placeholder="Yuri"
+              />
+            </div>
+          </div>
+          <div>
+            <label style={labelStyle}>Address Line 1</label>
+            <input
+              style={inputStyle}
+              value={form.address1}
+              onChange={(e) => setForm({ ...form, address1: e.target.value })}
+              placeholder="123 Rizal St."
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Address Line 2 (optional)</label>
+            <input
+              style={inputStyle}
+              value={form.address2}
+              onChange={(e) => setForm({ ...form, address2: e.target.value })}
+              placeholder="Brgy. Poblacion"
+            />
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "12px",
+            }}
+          >
+            <div>
+              <label style={labelStyle}>City</label>
+              <input
+                style={inputStyle}
+                value={form.city}
+                onChange={(e) => setForm({ ...form, city: e.target.value })}
+                placeholder="Koronadal"
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Province</label>
+              <input
+                style={inputStyle}
+                value={form.province}
+                onChange={(e) => setForm({ ...form, province: e.target.value })}
+                placeholder="South Cotabato"
+              />
+            </div>
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "12px",
+            }}
+          >
+            <div>
+              <label style={labelStyle}>ZIP Code</label>
+              <input
+                style={inputStyle}
+                value={form.zip}
+                onChange={(e) => setForm({ ...form, zip: e.target.value })}
+                placeholder="9506"
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Country</label>
+              <input
+                style={inputStyle}
+                value={form.country}
+                onChange={(e) => setForm({ ...form, country: e.target.value })}
+                placeholder="Philippines"
+              />
+            </div>
+          </div>
+          <div>
+            <label style={labelStyle}>Phone</label>
+            <input
+              style={inputStyle}
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              placeholder="+639123456789"
+            />
+          </div>
+        </div>
+        <div
+          style={{
+            padding: "20px 28px",
+            borderTop: "1px solid rgba(255,255,255,0.06)",
+            flexShrink: 0,
+            display: "flex",
+            gap: "10px",
+          }}
+        >
+          <button
+            onClick={onClose}
+            style={{
+              flex: 1,
+              padding: "13px",
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: "10px",
+              color: "rgba(245,247,249,0.4)",
+              fontFamily: "monospace",
+              fontSize: "10px",
+              fontWeight: 700,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              cursor: "pointer",
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => {
+              onSave(form);
+              onClose();
+            }}
+            style={{
+              flex: 2,
+              padding: "13px",
+              background: "#e8a830",
+              border: "none",
+              borderRadius: "10px",
+              color: "#0d1117",
+              fontFamily: "monospace",
+              fontSize: "10px",
+              fontWeight: 700,
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              cursor: "pointer",
+            }}
+          >
+            {isEditing ? "Save Changes" : "Add Address"}
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── Addresses Section ────────────────────────────────────────────────────────
+function AddressesSection() {
+  const [addresses, setAddresses] = useState(MOCK_ADDRESSES);
+  const [editingAddress, setEditingAddress] = useState<
+    Address | null | undefined
+  >(undefined);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  function handleSave(data: Omit<Address, "id" | "isDefault">) {
+    if (editingAddress === null) {
+      setAddresses((prev) => [
+        ...prev,
+        { ...data, id: `addr_${Date.now()}`, isDefault: prev.length === 0 },
+      ]);
+    } else if (editingAddress) {
+      setAddresses((prev) =>
+        prev.map((a) => (a.id === editingAddress.id ? { ...a, ...data } : a)),
+      );
+    }
+  }
+
+  function handleDelete(id: string) {
+    setAddresses((prev) => {
+      const filtered = prev.filter((a) => a.id !== id);
+      if (filtered.length > 0 && !filtered.some((a) => a.isDefault))
+        filtered[0].isDefault = true;
+      return filtered;
+    });
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <button
+          onClick={() => setEditingAddress(null)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            background: "rgba(232,168,48,0.08)",
+            border: "1px solid rgba(232,168,48,0.2)",
+            borderRadius: "8px",
+            padding: "7px 14px",
+            color: "#e8a830",
+            fontFamily: "monospace",
+            fontSize: "9px",
+            fontWeight: 700,
+            letterSpacing: "0.16em",
+            textTransform: "uppercase",
+            cursor: "pointer",
+          }}
+        >
+          <svg
+            width="10"
+            height="10"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+          >
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          Add Address
+        </button>
+      </div>
+      {addresses.length === 0 ? (
+        <div
+          style={{
+            background: "rgba(255,255,255,0.02)",
+            border: "1px solid rgba(255,255,255,0.07)",
+            borderRadius: "16px",
+            padding: "56px 24px",
+            textAlign: "center",
+          }}
+        >
+          <p
+            style={{
+              fontFamily: "Bebas Neue, sans-serif",
+              fontSize: "1.6rem",
+              letterSpacing: "0.08em",
+              color: "rgba(245,247,249,0.15)",
+              margin: "0 0 8px",
+            }}
+          >
+            No addresses saved.
+          </p>
+          <p
+            style={{
+              fontFamily: "monospace",
+              fontSize: "10px",
+              color: "rgba(245,247,249,0.25)",
+              letterSpacing: "0.08em",
+              margin: 0,
+            }}
+          >
+            Add an address to speed up checkout.
+          </p>
+        </div>
+      ) : (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+            gap: "12px",
+          }}
+        >
+          {addresses.map((addr) => (
+            <div
+              key={addr.id}
+              style={{
+                background: "rgba(255,255,255,0.02)",
+                border: `1px solid ${addr.isDefault ? "rgba(232,168,48,0.3)" : "rgba(255,255,255,0.07)"}`,
+                borderRadius: "14px",
+                padding: "18px 20px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "12px",
+                position: "relative",
+              }}
+            >
+              {addr.isDefault && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: "14px",
+                    right: "14px",
+                    fontFamily: "monospace",
+                    fontSize: "8px",
+                    fontWeight: 800,
+                    letterSpacing: "0.16em",
+                    textTransform: "uppercase",
+                    color: "#e8a830",
+                    background: "rgba(232,168,48,0.1)",
+                    border: "1px solid rgba(232,168,48,0.25)",
+                    borderRadius: "4px",
+                    padding: "2px 7px",
+                  }}
+                >
+                  Default
+                </span>
+              )}
+              <div
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                  alignItems: "flex-start",
+                }}
+              >
+                <div
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "8px",
+                    background: "rgba(74,127,165,0.1)",
+                    border: "1px solid rgba(74,127,165,0.15)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#4a7fa5"
+                    strokeWidth="2"
+                  >
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                    <circle cx="12" cy="10" r="3" />
+                  </svg>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p
+                    style={{
+                      fontFamily: "Poppins, sans-serif",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      color: "#f5f7f9",
+                      margin: "0 0 4px",
+                      paddingRight: addr.isDefault ? "56px" : "0",
+                    }}
+                  >
+                    {addr.firstName} {addr.lastName}
+                  </p>
+                  <p
+                    style={{
+                      fontFamily: "monospace",
+                      fontSize: "10px",
+                      color: "rgba(245,247,249,0.4)",
+                      margin: "0 0 2px",
+                      letterSpacing: "0.03em",
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {addr.address1}
+                    {addr.address2 ? `, ${addr.address2}` : ""}
+                  </p>
+                  <p
+                    style={{
+                      fontFamily: "monospace",
+                      fontSize: "10px",
+                      color: "rgba(245,247,249,0.4)",
+                      margin: "0 0 2px",
+                      letterSpacing: "0.03em",
+                    }}
+                  >
+                    {addr.city}, {addr.province} {addr.zip}
+                  </p>
+                  <p
+                    style={{
+                      fontFamily: "monospace",
+                      fontSize: "10px",
+                      color: "rgba(245,247,249,0.3)",
+                      margin: 0,
+                      letterSpacing: "0.03em",
+                    }}
+                  >
+                    {addr.phone}
+                  </p>
+                </div>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "8px",
+                  borderTop: "1px solid rgba(255,255,255,0.05)",
+                  paddingTop: "12px",
+                }}
+              >
+                {!addr.isDefault && (
+                  <button
+                    onClick={() =>
+                      setAddresses((prev) =>
+                        prev.map((a) => ({
+                          ...a,
+                          isDefault: a.id === addr.id,
+                        })),
+                      )
+                    }
+                    style={{
+                      flex: 1,
+                      padding: "8px",
+                      background: "transparent",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: "7px",
+                      color: "rgba(245,247,249,0.35)",
+                      fontFamily: "monospace",
+                      fontSize: "8px",
+                      fontWeight: 700,
+                      letterSpacing: "0.14em",
+                      textTransform: "uppercase",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Set Default
+                  </button>
+                )}
+                <button
+                  onClick={() => setEditingAddress(addr)}
+                  style={{
+                    flex: 1,
+                    padding: "8px",
+                    background: "rgba(74,127,165,0.08)",
+                    border: "1px solid rgba(74,127,165,0.2)",
+                    borderRadius: "7px",
+                    color: "#4a7fa5",
+                    fontFamily: "monospace",
+                    fontSize: "8px",
+                    fontWeight: 700,
+                    letterSpacing: "0.14em",
+                    textTransform: "uppercase",
+                    cursor: "pointer",
+                  }}
+                >
+                  Edit
+                </button>
+                {!addr.isDefault && (
+                  <button
+                    onClick={() => setDeletingId(addr.id)}
+                    style={{
+                      width: "34px",
+                      padding: "8px",
+                      background: "rgba(248,113,113,0.06)",
+                      border: "1px solid rgba(248,113,113,0.15)",
+                      borderRadius: "7px",
+                      color: "#f87171",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <svg
+                      width="11"
+                      height="11"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    >
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {mounted &&
+        editingAddress !== undefined &&
+        createPortal(
+          <AddressFormDrawer
+            address={editingAddress}
+            onClose={() => setEditingAddress(undefined)}
+            onSave={handleSave}
+          />,
+          document.body,
+        )}
+      {mounted &&
+        deletingId &&
+        createPortal(
+          <>
+            <div
+              onClick={() => setDeletingId(null)}
+              style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(0,0,0,0.7)",
+                backdropFilter: "blur(4px)",
+                zIndex: 99998,
+              }}
+            />
+            <div
+              style={{
+                position: "fixed",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                width: "min(360px, calc(100vw - 48px))",
+                background: "#0d1117",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: "16px",
+                padding: "28px",
+                zIndex: 99999,
+              }}
+            >
+              <div
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "10px",
+                  background: "rgba(248,113,113,0.1)",
+                  border: "1px solid rgba(248,113,113,0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: "16px",
+                }}
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#f87171"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                >
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" />
+                </svg>
+              </div>
+              <h3
+                style={{
+                  fontFamily: "Bebas Neue, sans-serif",
+                  fontSize: "1.4rem",
+                  letterSpacing: "0.06em",
+                  color: "#f5f7f9",
+                  margin: "0 0 8px",
+                }}
+              >
+                Remove Address?
+              </h3>
+              <p
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "10px",
+                  color: "rgba(245,247,249,0.4)",
+                  letterSpacing: "0.04em",
+                  margin: "0 0 24px",
+                  lineHeight: 1.6,
+                }}
+              >
+                This address will be permanently removed from your account.
+              </p>
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button
+                  onClick={() => setDeletingId(null)}
+                  style={{
+                    flex: 1,
+                    padding: "12px",
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: "8px",
+                    color: "rgba(245,247,249,0.4)",
+                    fontFamily: "monospace",
+                    fontSize: "10px",
+                    fontWeight: 700,
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    handleDelete(deletingId);
+                    setDeletingId(null);
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: "12px",
+                    background: "rgba(248,113,113,0.1)",
+                    border: "1px solid rgba(248,113,113,0.3)",
+                    borderRadius: "8px",
+                    color: "#f87171",
+                    fontFamily: "monospace",
+                    fontSize: "10px",
+                    fontWeight: 700,
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    cursor: "pointer",
+                  }}
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          </>,
+          document.body,
+        )}
+    </div>
+  );
+}
+
+// ─── Profile Section ──────────────────────────────────────────────────────────
+function ProfileSection({ customer }: { customer: CustomerData }) {
+  const [editing, setEditing] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [form, setForm] = useState({
+    displayName: customer.displayName,
+    phone: customer.phone ?? "",
+  });
+
+  const inputStyle = {
+    width: "100%",
+    background: "rgba(255,255,255,0.04)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: "8px",
+    padding: "10px 14px",
+    color: "#f5f7f9",
+    fontFamily: "monospace",
+    fontSize: "11px",
+    letterSpacing: "0.04em",
+    outline: "none",
+    boxSizing: "border-box" as const,
+  };
+
+  const labelStyle = {
+    fontFamily: "monospace",
+    fontSize: "8px",
+    fontWeight: 800,
+    letterSpacing: "0.22em",
+    textTransform: "uppercase" as const,
+    color: "rgba(245,247,249,0.3)",
+    display: "block",
+    marginBottom: "6px",
+  };
+
+  function handleSave() {
+    // wire to customerUpdate mutation when backend is ready
+    setEditing(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
+  }
+
+  function handleCancel() {
+    setForm({ displayName: customer.displayName, phone: customer.phone ?? "" });
+    setEditing(false);
+  }
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "20px",
+        maxWidth: "520px",
+      }}
+    >
+      {/* Avatar + name */}
+      <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+        <div
+          style={{
+            width: "64px",
+            height: "64px",
+            borderRadius: "50%",
+            background: "rgba(232,168,48,0.1)",
+            border: "2px solid rgba(232,168,48,0.25)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "Bebas Neue, sans-serif",
+              fontSize: "1.6rem",
+              color: "#e8a830",
+            }}
+          >
+            {form.displayName.charAt(0).toUpperCase()}
+          </span>
+        </div>
+        <div>
+          <p
+            style={{
+              fontFamily: "Bebas Neue, sans-serif",
+              fontSize: "1.4rem",
+              letterSpacing: "0.06em",
+              color: "#f5f7f9",
+              margin: "0 0 4px",
+            }}
+          >
+            {form.displayName}
+          </p>
+          <p
+            style={{
+              fontFamily: "monospace",
+              fontSize: "10px",
+              color: "rgba(245,247,249,0.35)",
+              letterSpacing: "0.06em",
+              margin: 0,
+            }}
+          >
+            {customer.email}
+          </p>
+        </div>
+      </div>
+
+      {/* Success banner */}
+      {saved && (
+        <div
+          style={{
+            background: "rgba(74,222,128,0.06)",
+            border: "1px solid rgba(74,222,128,0.2)",
+            borderRadius: "10px",
+            padding: "12px 16px",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+          }}
+        >
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#4ade80"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          <span
+            style={{
+              fontFamily: "monospace",
+              fontSize: "10px",
+              color: "#4ade80",
+              letterSpacing: "0.06em",
+            }}
+          >
+            Profile updated successfully.
+          </span>
+        </div>
+      )}
+
+      {/* Form / Display */}
+      {editing ? (
+        <div
+          style={{
+            background: "rgba(255,255,255,0.02)",
+            border: "1px solid rgba(255,255,255,0.07)",
+            borderRadius: "14px",
+            padding: "20px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "16px",
+          }}
+        >
+          <div>
+            <label style={labelStyle}>Display Name</label>
+            <input
+              style={inputStyle}
+              value={form.displayName}
+              onChange={(e) =>
+                setForm({ ...form, displayName: e.target.value })
+              }
+              placeholder="Your name"
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Phone</label>
+            <input
+              style={inputStyle}
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              placeholder="+639123456789"
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Email</label>
+            <div
+              style={{
+                ...inputStyle,
+                color: "rgba(245,247,249,0.25)",
+                cursor: "not-allowed",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <span>{customer.email}</span>
+              <span
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "8px",
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  color: "rgba(245,247,249,0.2)",
+                }}
+              >
+                Via Shopify
+              </span>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: "10px", paddingTop: "4px" }}>
+            <button
+              onClick={handleCancel}
+              style={{
+                flex: 1,
+                padding: "12px",
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: "10px",
+                color: "rgba(245,247,249,0.4)",
+                fontFamily: "monospace",
+                fontSize: "10px",
+                fontWeight: 700,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                cursor: "pointer",
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              style={{
+                flex: 2,
+                padding: "12px",
+                background: "#e8a830",
+                border: "none",
+                borderRadius: "10px",
+                color: "#0d1117",
+                fontFamily: "monospace",
+                fontSize: "10px",
+                fontWeight: 700,
+                letterSpacing: "0.2em",
+                textTransform: "uppercase",
+                cursor: "pointer",
+              }}
+            >
+              Save Changes
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div
+            style={{
+              background: "rgba(255,255,255,0.02)",
+              border: "1px solid rgba(255,255,255,0.07)",
+              borderRadius: "14px",
+              overflow: "hidden",
+            }}
+          >
+            {[
+              { label: "Name", value: form.displayName },
+              { label: "Email", value: customer.email ?? "—" },
+              { label: "Phone", value: form.phone || "—" },
+              {
+                label: "Total Orders",
+                value: String(customer.numberOfOrders ?? 0),
+              },
+            ].map((row, i, arr) => (
+              <div
+                key={row.label}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "14px 20px",
+                  borderBottom:
+                    i < arr.length - 1
+                      ? "1px solid rgba(255,255,255,0.05)"
+                      : "none",
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: "monospace",
+                    fontSize: "9px",
+                    fontWeight: 800,
+                    letterSpacing: "0.18em",
+                    textTransform: "uppercase",
+                    color: "rgba(245,247,249,0.3)",
+                  }}
+                >
+                  {row.label}
+                </span>
+                <span
+                  style={{
+                    fontFamily: "monospace",
+                    fontSize: "11px",
+                    color: "rgba(245,247,249,0.7)",
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  {row.value}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={() => setEditing(true)}
+            style={{
+              alignSelf: "flex-start",
+              display: "flex",
+              alignItems: "center",
+              gap: "7px",
+              background: "rgba(232,168,48,0.08)",
+              border: "1px solid rgba(232,168,48,0.2)",
+              borderRadius: "8px",
+              padding: "9px 16px",
+              color: "#e8a830",
+              fontFamily: "monospace",
+              fontSize: "9px",
+              fontWeight: 700,
+              letterSpacing: "0.16em",
+              textTransform: "uppercase",
+              cursor: "pointer",
+            }}
+          >
+            <svg
+              width="11"
+              height="11"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+            Edit Profile
+          </button>
+        </>
+      )}
+
+      {/* Shopify note */}
+      <div
+        style={{
+          background: "rgba(74,127,165,0.05)",
+          border: "1px solid rgba(74,127,165,0.12)",
+          borderRadius: "12px",
+          padding: "16px 18px",
+          display: "flex",
+          gap: "12px",
+          alignItems: "flex-start",
+        }}
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#4a7fa5"
+          strokeWidth="2"
+          style={{ marginTop: "1px", flexShrink: 0 }}
+        >
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 8v4M12 16h.01" />
+        </svg>
+        <p
+          style={{
+            fontFamily: "monospace",
+            fontSize: "10px",
+            color: "rgba(245,247,249,0.35)",
+            letterSpacing: "0.04em",
+            margin: 0,
+            lineHeight: 1.6,
+          }}
+        >
+          To change your email or password, use the link Shopify sends to your
+          inbox. Password management is handled securely through Shopify.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Export ──────────────────────────────────────────────────────────────
+export default function AccountClient({
+  customer,
+  SignOutButton,
+}: AccountClientProps) {
+  const [activeSection, setActiveSection] = useState<Section>("orders");
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  const sectionTitles: Record<Section, string> = {
+    orders: selectedOrder
+      ? `Order #${selectedOrder.orderNumber}`
+      : "Order History",
+    addresses: "Saved Addresses",
+    "recently-viewed": "Recently Viewed",
+    profile: "My Profile",
+  };
+
+  function handleNavClick(key: Section) {
+    setActiveSection(key);
+    if (key !== "orders") setSelectedOrder(null);
+  }
+
+  return (
+    <>
+      <style>{`
+        @media (max-width: 768px) {
+          .account-layout { flex-direction: column !important; }
+          .account-sidebar { width: 100% !important; position: static !important; border-right: none !important; border-bottom: 1px solid rgba(255,255,255,0.06) !important; padding: 0 !important; }
+          .sidebar-user { display: none !important; }
+          .sidebar-nav { flex-direction: row !important; gap: 4px !important; padding: 12px 20px !important; overflow-x: auto !important; }
+          .sidebar-signout { display: none !important; }
+          .account-content { padding: 24px 20px 60px !important; }
+        }
+        @media (min-width: 769px) {
+          .account-sidebar { position: sticky !important; top: 100px !important; align-self: flex-start !important; }
+        }
+      `}</style>
+
+      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 32px" }}>
+        <div
+          className="account-layout"
+          style={{
+            display: "flex",
+            gap: "0",
+            minHeight: "calc(100vh - 80px)",
+            alignItems: "flex-start",
+          }}
+        >
+          {/* ── Sidebar ────────────────────────────────────────────── */}
+          <aside
+            className="account-sidebar"
+            style={{
+              width: "240px",
+              flexShrink: 0,
+              borderRight: "1px solid rgba(255,255,255,0.06)",
+              display: "flex",
+              flexDirection: "column",
+              padding: "40px 0",
+            }}
+          >
+            <div
+              className="sidebar-user"
+              style={{
+                padding: "0 24px 32px",
+                borderBottom: "1px solid rgba(255,255,255,0.06)",
+                marginBottom: "16px",
+              }}
+            >
+              <div
+                style={{
+                  width: "44px",
+                  height: "44px",
+                  borderRadius: "50%",
+                  background: "rgba(232,168,48,0.1)",
+                  border: "2px solid rgba(232,168,48,0.25)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: "12px",
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: "Bebas Neue, sans-serif",
+                    fontSize: "1.2rem",
+                    color: "#e8a830",
+                  }}
+                >
+                  {customer.displayName.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <p
+                style={{
+                  fontFamily: "Bebas Neue, sans-serif",
+                  fontSize: "1.1rem",
+                  letterSpacing: "0.06em",
+                  color: "#f5f7f9",
+                  margin: "0 0 2px",
+                }}
+              >
+                {customer.displayName}
+              </p>
+              <p
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "9px",
+                  color: "rgba(245,247,249,0.3)",
+                  letterSpacing: "0.06em",
+                  margin: 0,
+                  wordBreak: "break-all",
+                }}
+              >
+                {customer.email}
+              </p>
+            </div>
+
+            <nav
+              className="sidebar-nav"
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "2px",
+                padding: "0 12px",
+                flex: 1,
+              }}
+            >
+              {NAV_ITEMS.map(({ key, label, icon }) => {
+                const isActive = activeSection === key;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => handleNavClick(key)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      padding: "11px 14px",
+                      borderRadius: "10px",
+                      border: "none",
+                      cursor: "pointer",
+                      width: "100%",
+                      textAlign: "left",
+                      background: isActive
+                        ? "rgba(232,168,48,0.08)"
+                        : "transparent",
+                      color: isActive ? "#e8a830" : "rgba(245,247,249,0.4)",
+                      transition: "all 0.15s",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isActive) {
+                        (
+                          e.currentTarget as HTMLButtonElement
+                        ).style.background = "rgba(255,255,255,0.03)";
+                        (e.currentTarget as HTMLButtonElement).style.color =
+                          "rgba(245,247,249,0.7)";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive) {
+                        (
+                          e.currentTarget as HTMLButtonElement
+                        ).style.background = "transparent";
+                        (e.currentTarget as HTMLButtonElement).style.color =
+                          "rgba(245,247,249,0.4)";
+                      }
+                    }}
+                  >
+                    <span
+                      style={{ opacity: isActive ? 1 : 0.6, flexShrink: 0 }}
+                    >
+                      {icon}
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: "monospace",
+                        fontSize: "10px",
+                        fontWeight: 700,
+                        letterSpacing: "0.14em",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {label}
+                    </span>
+                    {isActive && (
+                      <span
+                        style={{
+                          marginLeft: "auto",
+                          width: "4px",
+                          height: "4px",
+                          borderRadius: "50%",
+                          background: "#e8a830",
+                          flexShrink: 0,
+                        }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+
+            <div
+              className="sidebar-signout"
+              style={{
+                padding: "16px 12px 0",
+                borderTop: "1px solid rgba(255,255,255,0.06)",
+                marginTop: "16px",
+              }}
+            >
+              {SignOutButton}
+            </div>
+          </aside>
+
+          {/* ── Content ────────────────────────────────────────────── */}
+          <main
+            className="account-content"
+            style={{ flex: 1, minWidth: 0, padding: "40px 40px 80px" }}
+          >
+            <div style={{ marginBottom: "28px" }}>
+              {selectedOrder ? (
+                <>
+                  <button
+                    onClick={() => setSelectedOrder(null)}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "7px",
+                      background: "none",
+                      border: "none",
+                      color: "rgba(245,247,249,0.35)",
+                      fontFamily: "monospace",
+                      fontSize: "9px",
+                      fontWeight: 700,
+                      letterSpacing: "0.18em",
+                      textTransform: "uppercase",
+                      cursor: "pointer",
+                      padding: 0,
+                      marginBottom: "12px",
+                    }}
+                  >
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M19 12H5M12 5l-7 7 7 7" />
+                    </svg>
+                    All Orders
+                  </button>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-end",
+                      justifyContent: "space-between",
+                      flexWrap: "wrap",
+                      gap: "12px",
+                    }}
+                  >
+                    <h1
+                      style={{
+                        fontFamily: "Bebas Neue, sans-serif",
+                        fontSize: "clamp(1.8rem, 4vw, 2.6rem)",
+                        letterSpacing: "0.04em",
+                        color: "#f5f7f9",
+                        margin: 0,
+                        lineHeight: 0.95,
+                      }}
+                    >
+                      Order #{selectedOrder.orderNumber}
+                    </h1>
+                    <div
+                      style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}
+                    >
+                      <StatusBadge label={selectedOrder.financialStatus} />
+                      <StatusBadge label={selectedOrder.fulfillmentStatus} />
+                    </div>
+                  </div>
+                  <p
+                    style={{
+                      fontFamily: "monospace",
+                      fontSize: "10px",
+                      color: "rgba(245,247,249,0.3)",
+                      letterSpacing: "0.08em",
+                      margin: "10px 0 0",
+                    }}
+                  >
+                    Placed on {formatDate(selectedOrder.processedAt, true)}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p
+                    style={{
+                      fontFamily: "monospace",
+                      fontSize: "8px",
+                      fontWeight: 800,
+                      letterSpacing: "0.28em",
+                      textTransform: "uppercase",
+                      color: "rgba(245,247,249,0.25)",
+                      margin: "0 0 4px",
+                    }}
+                  >
+                    Shoepreme Account
+                  </p>
+                  <h1
+                    style={{
+                      fontFamily: "Bebas Neue, sans-serif",
+                      fontSize: "clamp(1.8rem, 4vw, 2.6rem)",
+                      letterSpacing: "0.04em",
+                      color: "#f5f7f9",
+                      margin: 0,
+                      lineHeight: 0.95,
+                    }}
+                  >
+                    {sectionTitles[activeSection]}
+                  </h1>
+                </>
+              )}
+            </div>
+
+            {activeSection === "orders" && !selectedOrder && (
+              <OrdersSection onSelect={setSelectedOrder} />
+            )}
+            {activeSection === "orders" && selectedOrder && (
+              <OrderDetail order={selectedOrder} />
+            )}
+            {activeSection === "addresses" && <AddressesSection />}
+            {activeSection === "profile" && (
+              <ProfileSection customer={customer} />
+            )}
+          </main>
+        </div>
+      </div>
+    </>
+  );
+}
