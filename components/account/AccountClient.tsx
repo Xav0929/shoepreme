@@ -1143,6 +1143,38 @@ function OrderDetail({ order }: { order: Order }) {
         </div>
       </div>
 
+      {/* Cancel Order — only shown when pending + unfulfilled */}
+      {order.financialStatus === "PENDING" &&
+        order.fulfillmentStatus === "UNFULFILLED" && (
+          <button
+            onClick={() => {
+              if (confirm("Are you sure you want to cancel this order?")) {
+                fetch(`/api/account-api/orders/${order.id}/cancel`, {
+                  method: "POST",
+                })
+                  .then(() => window.location.reload())
+                  .catch(() => alert("Failed to cancel. Please contact us."));
+              }
+            }}
+            style={{
+              width: "100%",
+              padding: "14px",
+              background: "rgba(248,113,113,0.06)",
+              border: "1px solid rgba(248,113,113,0.2)",
+              borderRadius: "12px",
+              color: "#f87171",
+              fontFamily: "monospace",
+              fontSize: "10px",
+              fontWeight: 700,
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              cursor: "pointer",
+            }}
+          >
+            Cancel Order
+          </button>
+        )}
+
       {/* Track CTA — only onClick added, everything else unchanged */}
       <button
         onClick={() => setTrackingOpen(true)} // ← ONLY CHANGE
@@ -3236,11 +3268,11 @@ export default function AccountClient({
           .mobile-account-header { display: block; }
           .account-layout { flex-direction: column !important; }
           .account-sidebar { display: none !important; }
-.account-content { padding: 20px 16px 80px !important; }
-          .mobile-hide-orders { display: none !important; }
-        }
-        @media (min-width: 769px) {
-          .account-sidebar { position: sticky !important; top: 100px !important; align-self: flex-start !important; }
+            .account-content { padding: 20px 16px 80px !important; }
+                      .mobile-hide-orders { display: none !important; }
+                    }
+            @media (min-width: 769px) {
+          .account-sidebar { position: sticky !important; top: 80px !important; align-self: flex-start !important; height: calc(100vh - 80px) !important; overflow-y: auto !important; }
         }
       `}</style>
 
