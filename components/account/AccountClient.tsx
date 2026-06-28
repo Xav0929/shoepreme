@@ -603,6 +603,7 @@ function OrderDetail({ order }: { order: Order }) {
   const items = order.lineItems.edges.map((e) => e.node);
   const addr = order.shippingAddress;
   const isPending = order.financialStatus === "PENDING";
+  const [trackingOpen, setTrackingOpen] = useState(false);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
@@ -824,33 +825,40 @@ function OrderDetail({ order }: { order: Order }) {
       <div>
         <p
           style={{
-            background: "rgba(232,168,48,0.06)",
-            border: "1px solid rgba(232,168,48,0.2)",
-            borderRadius: "16px",
-            padding: "20px 24px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "16px",
+            fontFamily: "monospace",
+            fontSize: "9px",
+            fontWeight: 800,
+            letterSpacing: "0.22em",
+            textTransform: "uppercase",
+            color: "rgba(245,247,249,0.3)",
+            margin: "0 0 12px",
           }}
         >
-          {/* Header */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: "10px",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          Items ({items.length})
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          {items.map((item, i) => (
+            <div
+              key={i}
+              style={{
+                display: "flex",
+                gap: "16px",
+                alignItems: "center",
+                background: "rgba(255,255,255,0.02)",
+                border: "1px solid rgba(255,255,255,0.06)",
+                borderRadius: "14px",
+                padding: "16px",
+              }}
+            >
               <div
                 style={{
-                  width: "36px",
-                  height: "36px",
+                  width: "64px",
+                  height: "64px",
                   borderRadius: "10px",
-                  background: "rgba(232,168,48,0.12)",
-                  border: "1px solid rgba(232,168,48,0.25)",
+                  overflow: "hidden",
+                  flexShrink: 0,
+                  background: "rgba(74,127,165,0.1)",
+                  border: "1px solid rgba(74,127,165,0.2)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -1095,20 +1103,49 @@ function OrderDetail({ order }: { order: Order }) {
                 </div>
               ) : null,
             )}
-            <div style={{ height: "1px", background: "rgba(255,255,255,0.06)" }} />
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontFamily: "monospace", fontSize: "10px", fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(245,247,249,0.5)" }}>Total</span>
-              <span style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: "1.5rem", letterSpacing: "0.06em", color: "#e8a830" }}>
-                {formatPrice(order.currentTotalPrice.amount, order.currentTotalPrice.currencyCode)}
+            <div
+              style={{ height: "1px", background: "rgba(255,255,255,0.06)" }}
+            />
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "10px",
+                  fontWeight: 800,
+                  letterSpacing: "0.14em",
+                  textTransform: "uppercase",
+                  color: "rgba(245,247,249,0.5)",
+                }}
+              >
+                Total
+              </span>
+              <span
+                style={{
+                  fontFamily: "Bebas Neue, sans-serif",
+                  fontSize: "1.5rem",
+                  letterSpacing: "0.06em",
+                  color: "#e8a830",
+                }}
+              >
+                {formatPrice(
+                  order.currentTotalPrice.amount,
+                  order.currentTotalPrice.currencyCode,
+                )}
               </span>
             </div>
           </div>
         </div>
       </div>
- 
+
       {/* Track CTA — only onClick added, everything else unchanged */}
       <button
-        onClick={() => setTrackingOpen(true)}  // ← ONLY CHANGE
+        onClick={() => setTrackingOpen(true)} // ← ONLY CHANGE
         style={{
           width: "100%",
           padding: "16px",
@@ -1126,7 +1163,7 @@ function OrderDetail({ order }: { order: Order }) {
       >
         Track Order →
       </button>
- 
+
       {/* Tracking modal — rendered via portal so it escapes any overflow:hidden */}
       {trackingOpen && (
         <TrackOrderModal order={order} onClose={() => setTrackingOpen(false)} />
@@ -1145,7 +1182,6 @@ function AddressFormDrawer({
   onClose: () => void;
   onSave: (data: Omit<Address, "id" | "isDefault">) => void;
 }) {
-  
   const [form, setForm] = useState({
     firstName: address?.firstName ?? "",
     lastName: address?.lastName ?? "",
@@ -1437,7 +1473,7 @@ function AddressFormDrawer({
     </>
   );
 }
-/ ─── STEP 2: Add this component before OrderDetail ────────────────────────────/
+/ ─── STEP 2: Add this component before OrderDetail ────────────────────────────/;
 function TrackOrderModal({
   order,
   onClose,
@@ -1452,9 +1488,9 @@ function TrackOrderModal({
   const [locationStatus, setLocationStatus] = useState<
     "idle" | "loading" | "granted" | "denied"
   >("idle");
- 
+
   const addr = order.shippingAddress;
- 
+
   function requestLocation() {
     if (!navigator.geolocation) {
       setLocationStatus("denied");
@@ -1473,22 +1509,22 @@ function TrackOrderModal({
       { timeout: 10000 },
     );
   }
- 
+
   // Build Google Maps embed URL — shows route if customer location granted,
   // otherwise just shows the shop pin
   const mapSrc =
     locationStatus === "granted" && customerCoords
       ? `https://www.google.com/maps/embed/v1/directions?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""}&origin=${customerCoords.lat},${customerCoords.lng}&destination=${SHOP_LOCATION.lat},${SHOP_LOCATION.lng}&mode=driving`
       : `https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""}&q=${SHOP_LOCATION.lat},${SHOP_LOCATION.lng}&zoom=15`;
- 
+
   // Fallback iframe using OpenStreetMap (no API key needed)
   const osmSrc =
     locationStatus === "granted" && customerCoords
       ? `https://www.openstreetmap.org/export/embed.html?bbox=${Math.min(customerCoords.lng, SHOP_LOCATION.lng) - 0.05},${Math.min(customerCoords.lat, SHOP_LOCATION.lat) - 0.05},${Math.max(customerCoords.lng, SHOP_LOCATION.lng) + 0.05},${Math.max(customerCoords.lat, SHOP_LOCATION.lat) + 0.05}&layer=mapnik&marker=${SHOP_LOCATION.lat},${SHOP_LOCATION.lng}`
       : `https://www.openstreetmap.org/export/embed.html?bbox=${SHOP_LOCATION.lng - 0.02},${SHOP_LOCATION.lat - 0.02},${SHOP_LOCATION.lng + 0.02},${SHOP_LOCATION.lat + 0.02}&layer=mapnik&marker=${SHOP_LOCATION.lat},${SHOP_LOCATION.lng}`;
- 
+
   const useGoogleMaps = !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
- 
+
   return createPortal(
     <>
       {/* Backdrop */}
@@ -1502,7 +1538,7 @@ function TrackOrderModal({
           zIndex: 99998,
         }}
       />
- 
+
       {/* Modal */}
       <div
         style={{
@@ -1578,7 +1614,7 @@ function TrackOrderModal({
             ✕
           </button>
         </div>
- 
+
         {/* Body */}
         <div
           style={{
@@ -1684,7 +1720,7 @@ function TrackOrderModal({
                 </p>
               </div>
             </div>
- 
+
             {/* Shipping address */}
             {addr && (
               <div
@@ -1766,7 +1802,7 @@ function TrackOrderModal({
               </div>
             )}
           </div>
- 
+
           {/* Location permission prompt */}
           {locationStatus === "idle" && (
             <div
@@ -1782,7 +1818,9 @@ function TrackOrderModal({
                 flexWrap: "wrap",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "10px" }}
+              >
                 <svg
                   width="14"
                   height="14"
@@ -1842,7 +1880,7 @@ function TrackOrderModal({
               </button>
             </div>
           )}
- 
+
           {locationStatus === "loading" && (
             <div
               style={{
@@ -1880,7 +1918,7 @@ function TrackOrderModal({
               <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>
           )}
- 
+
           {locationStatus === "denied" && (
             <div
               style={{
@@ -1917,7 +1955,7 @@ function TrackOrderModal({
               </p>
             </div>
           )}
- 
+
           {locationStatus === "granted" && customerCoords && (
             <div
               style={{
@@ -1954,7 +1992,7 @@ function TrackOrderModal({
               </p>
             </div>
           )}
- 
+
           {/* Map */}
           <div
             style={{
@@ -1975,7 +2013,7 @@ function TrackOrderModal({
               title="Order tracking map"
             />
           </div>
- 
+
           {/* Open in Google Maps CTA */}
           <a
             href={
@@ -2057,7 +2095,9 @@ function AddressSkeleton() {
           }}
         >
           {/* icon + name row */}
-          <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+          <div
+            style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}
+          >
             <div
               style={{
                 width: "32px",
@@ -2067,11 +2107,46 @@ function AddressSkeleton() {
                 flexShrink: 0,
               }}
             />
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "6px" }}>
-              <div style={{ height: "10px", width: "55%", borderRadius: "4px", background: "rgba(255,255,255,0.06)" }} />
-              <div style={{ height: "8px",  width: "80%", borderRadius: "4px", background: "rgba(255,255,255,0.04)" }} />
-              <div style={{ height: "8px",  width: "60%", borderRadius: "4px", background: "rgba(255,255,255,0.04)" }} />
-              <div style={{ height: "8px",  width: "40%", borderRadius: "4px", background: "rgba(255,255,255,0.03)" }} />
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                gap: "6px",
+              }}
+            >
+              <div
+                style={{
+                  height: "10px",
+                  width: "55%",
+                  borderRadius: "4px",
+                  background: "rgba(255,255,255,0.06)",
+                }}
+              />
+              <div
+                style={{
+                  height: "8px",
+                  width: "80%",
+                  borderRadius: "4px",
+                  background: "rgba(255,255,255,0.04)",
+                }}
+              />
+              <div
+                style={{
+                  height: "8px",
+                  width: "60%",
+                  borderRadius: "4px",
+                  background: "rgba(255,255,255,0.04)",
+                }}
+              />
+              <div
+                style={{
+                  height: "8px",
+                  width: "40%",
+                  borderRadius: "4px",
+                  background: "rgba(255,255,255,0.03)",
+                }}
+              />
             </div>
           </div>
           {/* button row */}
@@ -2083,8 +2158,22 @@ function AddressSkeleton() {
               paddingTop: "12px",
             }}
           >
-            <div style={{ flex: 1, height: "28px", borderRadius: "7px", background: "rgba(255,255,255,0.04)" }} />
-            <div style={{ flex: 1, height: "28px", borderRadius: "7px", background: "rgba(74,127,165,0.06)" }} />
+            <div
+              style={{
+                flex: 1,
+                height: "28px",
+                borderRadius: "7px",
+                background: "rgba(255,255,255,0.04)",
+              }}
+            />
+            <div
+              style={{
+                flex: 1,
+                height: "28px",
+                borderRadius: "7px",
+                background: "rgba(74,127,165,0.06)",
+              }}
+            />
           </div>
         </div>
       ))}
@@ -2096,14 +2185,18 @@ function AddressSkeleton() {
 function AddressesSection({ customerId }: { customerId: string }) {
   // Seed state from cache so revisiting the tab is instant
   const [addresses, setAddresses] = useState<Address[]>(
-    () => addressCache.get(customerId) ?? []
+    () => addressCache.get(customerId) ?? [],
   );
   const [loading, setLoading] = useState(() => !addressCache.has(customerId));
-  const [editingAddress, setEditingAddress] = useState<Address | null | undefined>(undefined);
-  const [deletingId, setDeletingId]           = useState<string | null>(null);
-  const [mounted, setMounted]                 = useState(false);
+  const [editingAddress, setEditingAddress] = useState<
+    Address | null | undefined
+  >(undefined);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     // Already have cached data — skip the network call entirely
@@ -2113,7 +2206,9 @@ function AddressesSection({ customerId }: { customerId: string }) {
     async function load() {
       setLoading(true);
       try {
-        const res  = await fetch(`/api/account-api/addresses?customerId=${encodeURIComponent(customerId)}`);
+        const res = await fetch(
+          `/api/account-api/addresses?customerId=${encodeURIComponent(customerId)}`,
+        );
         const data = await res.json();
         if (!cancelled) {
           const list = data.addresses ?? [];
@@ -2127,7 +2222,9 @@ function AddressesSection({ customerId }: { customerId: string }) {
       }
     }
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [customerId]);
 
   // ── helpers that also keep the cache in sync ──────────────────────────────
@@ -2135,10 +2232,10 @@ function AddressesSection({ customerId }: { customerId: string }) {
   async function handleSave(data: Omit<Address, "id" | "isDefault">) {
     if (editingAddress === null) {
       try {
-        const res    = await fetch("/api/account-api/addresses", {
-          method:  "POST",
+        const res = await fetch("/api/account-api/addresses", {
+          method: "POST",
           headers: { "Content-Type": "application/json" },
-          body:    JSON.stringify({ customerId, ...data }),
+          body: JSON.stringify({ customerId, ...data }),
         });
         const result = await res.json();
         if (res.ok && result.address) {
@@ -2148,29 +2245,40 @@ function AddressesSection({ customerId }: { customerId: string }) {
             return next;
           });
         }
-      } catch (err) { console.error("Failed to create address", err); }
+      } catch (err) {
+        console.error("Failed to create address", err);
+      }
     } else if (editingAddress) {
       try {
-        const res    = await fetch(`/api/account-api/addresses/${editingAddress.id}`, {
-          method:  "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body:    JSON.stringify(data),
-        });
+        const res = await fetch(
+          `/api/account-api/addresses/${editingAddress.id}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+          },
+        );
         const result = await res.json();
         if (res.ok && result.address) {
           setAddresses((prev) => {
-            const next = prev.map((a) => a.id === editingAddress.id ? result.address : a);
+            const next = prev.map((a) =>
+              a.id === editingAddress.id ? result.address : a,
+            );
             addressCache.set(customerId, next);
             return next;
           });
         }
-      } catch (err) { console.error("Failed to update address", err); }
+      } catch (err) {
+        console.error("Failed to update address", err);
+      }
     }
   }
 
   async function handleDelete(id: string) {
     try {
-      const res = await fetch(`/api/account-api/addresses/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/account-api/addresses/${id}`, {
+        method: "DELETE",
+      });
       if (res.ok) {
         setAddresses((prev) => {
           const filtered = prev.filter((a) => a.id !== id);
@@ -2181,7 +2289,9 @@ function AddressesSection({ customerId }: { customerId: string }) {
           return filtered;
         });
       }
-    } catch (err) { console.error("Failed to delete address", err); }
+    } catch (err) {
+      console.error("Failed to delete address", err);
+    }
   }
 
   async function handleSetDefault(id: string) {
@@ -2192,8 +2302,12 @@ function AddressesSection({ customerId }: { customerId: string }) {
       return next;
     });
     try {
-      await fetch(`/api/account-api/addresses/${id}/default`, { method: "POST" });
-    } catch (err) { console.error("Failed to set default address", err); }
+      await fetch(`/api/account-api/addresses/${id}/default`, {
+        method: "POST",
+      });
+    } catch (err) {
+      console.error("Failed to set default address", err);
+    }
   }
 
   // ── render ────────────────────────────────────────────────────────────────
@@ -2204,14 +2318,31 @@ function AddressesSection({ customerId }: { customerId: string }) {
         <button
           onClick={() => setEditingAddress(null)}
           style={{
-            display: "flex", alignItems: "center", gap: "6px",
-            background: "rgba(232,168,48,0.08)", border: "1px solid rgba(232,168,48,0.2)",
-            borderRadius: "8px", padding: "7px 14px", color: "#e8a830",
-            fontFamily: "monospace", fontSize: "9px", fontWeight: 700,
-            letterSpacing: "0.16em", textTransform: "uppercase", cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            background: "rgba(232,168,48,0.08)",
+            border: "1px solid rgba(232,168,48,0.2)",
+            borderRadius: "8px",
+            padding: "7px 14px",
+            color: "#e8a830",
+            fontFamily: "monospace",
+            fontSize: "9px",
+            fontWeight: 700,
+            letterSpacing: "0.16em",
+            textTransform: "uppercase",
+            cursor: "pointer",
           }}
         >
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <svg
+            width="10"
+            height="10"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+          >
             <path d="M12 5v14M5 12h14" />
           </svg>
           Add Address
@@ -2223,65 +2354,239 @@ function AddressesSection({ customerId }: { customerId: string }) {
       {loading && addresses.length === 0 ? (
         <AddressSkeleton />
       ) : addresses.length === 0 ? (
-        <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "16px", padding: "56px 24px", textAlign: "center" }}>
-          <p style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: "1.6rem", letterSpacing: "0.08em", color: "rgba(245,247,249,0.15)", margin: "0 0 8px" }}>
+        <div
+          style={{
+            background: "rgba(255,255,255,0.02)",
+            border: "1px solid rgba(255,255,255,0.07)",
+            borderRadius: "16px",
+            padding: "56px 24px",
+            textAlign: "center",
+          }}
+        >
+          <p
+            style={{
+              fontFamily: "Bebas Neue, sans-serif",
+              fontSize: "1.6rem",
+              letterSpacing: "0.08em",
+              color: "rgba(245,247,249,0.15)",
+              margin: "0 0 8px",
+            }}
+          >
             No addresses saved.
           </p>
-          <p style={{ fontFamily: "monospace", fontSize: "10px", color: "rgba(245,247,249,0.25)", letterSpacing: "0.08em", margin: 0 }}>
+          <p
+            style={{
+              fontFamily: "monospace",
+              fontSize: "10px",
+              color: "rgba(245,247,249,0.25)",
+              letterSpacing: "0.08em",
+              margin: 0,
+            }}
+          >
             Add an address to speed up checkout.
           </p>
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "12px" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+            gap: "12px",
+          }}
+        >
           {addresses.map((addr) => (
             <div
               key={addr.id}
               style={{
                 background: "rgba(255,255,255,0.02)",
                 border: `1px solid ${addr.isDefault ? "rgba(232,168,48,0.3)" : "rgba(255,255,255,0.07)"}`,
-                borderRadius: "14px", padding: "18px 20px",
-                display: "flex", flexDirection: "column", gap: "12px", position: "relative",
+                borderRadius: "14px",
+                padding: "18px 20px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "12px",
+                position: "relative",
               }}
             >
               {addr.isDefault && (
-                <span style={{ position: "absolute", top: "14px", right: "14px", fontFamily: "monospace", fontSize: "8px", fontWeight: 800, letterSpacing: "0.16em", textTransform: "uppercase", color: "#e8a830", background: "rgba(232,168,48,0.1)", border: "1px solid rgba(232,168,48,0.25)", borderRadius: "4px", padding: "2px 7px" }}>
+                <span
+                  style={{
+                    position: "absolute",
+                    top: "14px",
+                    right: "14px",
+                    fontFamily: "monospace",
+                    fontSize: "8px",
+                    fontWeight: 800,
+                    letterSpacing: "0.16em",
+                    textTransform: "uppercase",
+                    color: "#e8a830",
+                    background: "rgba(232,168,48,0.1)",
+                    border: "1px solid rgba(232,168,48,0.25)",
+                    borderRadius: "4px",
+                    padding: "2px 7px",
+                  }}
+                >
                   Default
                 </span>
               )}
-              <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
-                <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "rgba(74,127,165,0.1)", border: "1px solid rgba(74,127,165,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4a7fa5" strokeWidth="2">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
+              <div
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                  alignItems: "flex-start",
+                }}
+              >
+                <div
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "8px",
+                    background: "rgba(74,127,165,0.1)",
+                    border: "1px solid rgba(74,127,165,0.15)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#4a7fa5"
+                    strokeWidth="2"
+                  >
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                    <circle cx="12" cy="10" r="3" />
                   </svg>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontFamily: "Poppins, sans-serif", fontSize: "12px", fontWeight: 600, color: "#f5f7f9", margin: "0 0 4px", paddingRight: addr.isDefault ? "56px" : "0" }}>
+                  <p
+                    style={{
+                      fontFamily: "Poppins, sans-serif",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      color: "#f5f7f9",
+                      margin: "0 0 4px",
+                      paddingRight: addr.isDefault ? "56px" : "0",
+                    }}
+                  >
                     {addr.firstName} {addr.lastName}
                   </p>
-                  <p style={{ fontFamily: "monospace", fontSize: "10px", color: "rgba(245,247,249,0.4)", margin: "0 0 2px", letterSpacing: "0.03em", lineHeight: 1.5 }}>
-                    {addr.address1}{addr.address2 ? `, ${addr.address2}` : ""}
+                  <p
+                    style={{
+                      fontFamily: "monospace",
+                      fontSize: "10px",
+                      color: "rgba(245,247,249,0.4)",
+                      margin: "0 0 2px",
+                      letterSpacing: "0.03em",
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {addr.address1}
+                    {addr.address2 ? `, ${addr.address2}` : ""}
                   </p>
-                  <p style={{ fontFamily: "monospace", fontSize: "10px", color: "rgba(245,247,249,0.4)", margin: "0 0 2px", letterSpacing: "0.03em" }}>
+                  <p
+                    style={{
+                      fontFamily: "monospace",
+                      fontSize: "10px",
+                      color: "rgba(245,247,249,0.4)",
+                      margin: "0 0 2px",
+                      letterSpacing: "0.03em",
+                    }}
+                  >
                     {addr.city}, {addr.province} {addr.zip}
                   </p>
-                  <p style={{ fontFamily: "monospace", fontSize: "10px", color: "rgba(245,247,249,0.3)", margin: 0, letterSpacing: "0.03em" }}>
+                  <p
+                    style={{
+                      fontFamily: "monospace",
+                      fontSize: "10px",
+                      color: "rgba(245,247,249,0.3)",
+                      margin: 0,
+                      letterSpacing: "0.03em",
+                    }}
+                  >
                     {addr.phone}
                   </p>
                 </div>
               </div>
-              <div style={{ display: "flex", gap: "8px", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "12px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "8px",
+                  borderTop: "1px solid rgba(255,255,255,0.05)",
+                  paddingTop: "12px",
+                }}
+              >
                 {!addr.isDefault && (
-                  <button onClick={() => handleSetDefault(addr.id)} style={{ flex: 1, padding: "8px", background: "transparent", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "7px", color: "rgba(245,247,249,0.35)", fontFamily: "monospace", fontSize: "8px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", cursor: "pointer" }}>
+                  <button
+                    onClick={() => handleSetDefault(addr.id)}
+                    style={{
+                      flex: 1,
+                      padding: "8px",
+                      background: "transparent",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: "7px",
+                      color: "rgba(245,247,249,0.35)",
+                      fontFamily: "monospace",
+                      fontSize: "8px",
+                      fontWeight: 700,
+                      letterSpacing: "0.14em",
+                      textTransform: "uppercase",
+                      cursor: "pointer",
+                    }}
+                  >
                     Set Default
                   </button>
                 )}
-                <button onClick={() => setEditingAddress(addr)} style={{ flex: 1, padding: "8px", background: "rgba(74,127,165,0.08)", border: "1px solid rgba(74,127,165,0.2)", borderRadius: "7px", color: "#4a7fa5", fontFamily: "monospace", fontSize: "8px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", cursor: "pointer" }}>
+                <button
+                  onClick={() => setEditingAddress(addr)}
+                  style={{
+                    flex: 1,
+                    padding: "8px",
+                    background: "rgba(74,127,165,0.08)",
+                    border: "1px solid rgba(74,127,165,0.2)",
+                    borderRadius: "7px",
+                    color: "#4a7fa5",
+                    fontFamily: "monospace",
+                    fontSize: "8px",
+                    fontWeight: 700,
+                    letterSpacing: "0.14em",
+                    textTransform: "uppercase",
+                    cursor: "pointer",
+                  }}
+                >
                   Edit
                 </button>
                 {!addr.isDefault && (
-                  <button onClick={() => setDeletingId(addr.id)} style={{ width: "34px", padding: "8px", background: "rgba(248,113,113,0.06)", border: "1px solid rgba(248,113,113,0.15)", borderRadius: "7px", color: "#f87171", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                      <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" />
+                  <button
+                    onClick={() => setDeletingId(addr.id)}
+                    style={{
+                      width: "34px",
+                      padding: "8px",
+                      background: "rgba(248,113,113,0.06)",
+                      border: "1px solid rgba(248,113,113,0.15)",
+                      borderRadius: "7px",
+                      color: "#f87171",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <svg
+                      width="11"
+                      height="11"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    >
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" />
                     </svg>
                   </button>
                 )}
@@ -2292,39 +2597,140 @@ function AddressesSection({ customerId }: { customerId: string }) {
       )}
 
       {/* Portals unchanged */}
-      {mounted && editingAddress !== undefined &&
+      {mounted &&
+        editingAddress !== undefined &&
         createPortal(
-          <AddressFormDrawer address={editingAddress} onClose={() => setEditingAddress(undefined)} onSave={handleSave} />,
-          document.body
-        )
-      }
-      {mounted && deletingId &&
+          <AddressFormDrawer
+            address={editingAddress}
+            onClose={() => setEditingAddress(undefined)}
+            onSave={handleSave}
+          />,
+          document.body,
+        )}
+      {mounted &&
+        deletingId &&
         createPortal(
           <>
-            <div onClick={() => setDeletingId(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)", zIndex: 99998 }} />
-            <div style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "min(360px, calc(100vw - 48px))", background: "#0d1117", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "16px", padding: "28px", zIndex: 99999 }}>
-              <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.2)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "16px" }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" strokeLinecap="round">
-                  <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" />
+            <div
+              onClick={() => setDeletingId(null)}
+              style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(0,0,0,0.7)",
+                backdropFilter: "blur(4px)",
+                zIndex: 99998,
+              }}
+            />
+            <div
+              style={{
+                position: "fixed",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                width: "min(360px, calc(100vw - 48px))",
+                background: "#0d1117",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: "16px",
+                padding: "28px",
+                zIndex: 99999,
+              }}
+            >
+              <div
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "10px",
+                  background: "rgba(248,113,113,0.1)",
+                  border: "1px solid rgba(248,113,113,0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: "16px",
+                }}
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#f87171"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                >
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" />
                 </svg>
               </div>
-              <h3 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: "1.4rem", letterSpacing: "0.06em", color: "#f5f7f9", margin: "0 0 8px" }}>Remove Address?</h3>
-              <p style={{ fontFamily: "monospace", fontSize: "10px", color: "rgba(245,247,249,0.4)", letterSpacing: "0.04em", margin: "0 0 24px", lineHeight: 1.6 }}>
+              <h3
+                style={{
+                  fontFamily: "Bebas Neue, sans-serif",
+                  fontSize: "1.4rem",
+                  letterSpacing: "0.06em",
+                  color: "#f5f7f9",
+                  margin: "0 0 8px",
+                }}
+              >
+                Remove Address?
+              </h3>
+              <p
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "10px",
+                  color: "rgba(245,247,249,0.4)",
+                  letterSpacing: "0.04em",
+                  margin: "0 0 24px",
+                  lineHeight: 1.6,
+                }}
+              >
                 This address will be permanently removed from your account.
               </p>
               <div style={{ display: "flex", gap: "10px" }}>
-                <button onClick={() => setDeletingId(null)} style={{ flex: 1, padding: "12px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", color: "rgba(245,247,249,0.4)", fontFamily: "monospace", fontSize: "10px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", cursor: "pointer" }}>
+                <button
+                  onClick={() => setDeletingId(null)}
+                  style={{
+                    flex: 1,
+                    padding: "12px",
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: "8px",
+                    color: "rgba(245,247,249,0.4)",
+                    fontFamily: "monospace",
+                    fontSize: "10px",
+                    fontWeight: 700,
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    cursor: "pointer",
+                  }}
+                >
                   Cancel
                 </button>
-                <button onClick={() => { handleDelete(deletingId); setDeletingId(null); }} style={{ flex: 1, padding: "12px", background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", borderRadius: "8px", color: "#f87171", fontFamily: "monospace", fontSize: "10px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", cursor: "pointer" }}>
+                <button
+                  onClick={() => {
+                    handleDelete(deletingId);
+                    setDeletingId(null);
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: "12px",
+                    background: "rgba(248,113,113,0.1)",
+                    border: "1px solid rgba(248,113,113,0.3)",
+                    borderRadius: "8px",
+                    color: "#f87171",
+                    fontFamily: "monospace",
+                    fontSize: "10px",
+                    fontWeight: 700,
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    cursor: "pointer",
+                  }}
+                >
                   Remove
                 </button>
               </div>
             </div>
           </>,
-          document.body
-        )
-      }
+          document.body,
+        )}
     </div>
   );
 }
@@ -2396,15 +2802,15 @@ function ProfileSection({
         }),
       });
       const result = await res.json();
-     if (res.ok && result.customer) {
-      onCustomerUpdate({
-        ...customer,           // keep email, numberOfOrders, etc.
-        ...result.customer,    // overwrite only what the server returned
-      });
-      setEditing(false);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-    }
+      if (res.ok && result.customer) {
+        onCustomerUpdate({
+          ...customer, // keep email, numberOfOrders, etc.
+          ...result.customer, // overwrite only what the server returned
+        });
+        setEditing(false);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
+      }
     } catch (err) {
       console.error("Failed to update profile", err);
     } finally {
