@@ -201,10 +201,16 @@ const ORDER_TABS: {
   filter: (o: Order) => boolean;
 }[] = [
   { key: "all", label: "All", filter: () => true },
-  {
+ {
     key: "to-pay",
     label: "To Pay",
     filter: (o) => o.financialStatus === "PENDING",
+  },
+  {
+    key: "pending",
+    label: "Pending",
+    filter: (o) =>
+      o.financialStatus === "PAID" && o.fulfillmentStatus === "UNFULFILLED",
   },
   {
     key: "to-ship",
@@ -607,12 +613,18 @@ function CancelOrderButton({ order }: { order: Order }) {
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    const numericId = (order.id.split("/").pop() ?? order.id).split("?")[0];
+    fetch(`/api/account-api/orders/${numericId}/cancel`)
+      .then((r) => r.json())
+      .then((d) => { if (d.cancelled) setCancelled(true); })
+      .catch(() => {});
+  }, [order.id]);
 
   async function handleCancel() {
     setCancelling(true);
     try {
-      const res = await fetch(`/api/account-api/orders/${order.id}/cancel`, {
+      const numericId = (order.id.split("/").pop() ?? order.id).split("?")[0];
+      const res = await fetch(`/api/account-api/orders/${numericId}/cancel`, {
         method: "POST",
       });
       if (res.ok) {
@@ -853,6 +865,10 @@ function OrderDetail({
   const items = order.lineItems.edges.map((e) => e.node);
   const addr = order.shippingAddress;
   const isPending = order.financialStatus === "PENDING";
+  const isCancellable =
+    order.financialStatus === "PENDING" ||
+    (order.financialStatus === "PAID" &&
+      order.fulfillmentStatus === "UNFULFILLED");
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
@@ -1612,7 +1628,7 @@ function OrderDetail({
       </button>
 
       {/* Cancel Order — only for pending/unfulfilled orders */}
-      {isPending && <CancelOrderButton order={order} />}
+      {isCancellable && <CancelOrderButton order={order} />}
     </div>
   );
 }

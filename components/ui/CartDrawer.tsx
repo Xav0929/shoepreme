@@ -136,7 +136,10 @@ export default function CartDrawer() {
                 Your bag is empty
               </p>
               <button
-                onClick={closeCart}
+                onClick={() => {
+                  closeCart();
+                  window.location.href = "/products";
+                }}
                 style={{
                   marginTop: "8px",
                   background: "#4a7fa5",
