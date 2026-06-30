@@ -1420,6 +1420,7 @@ export default function AdminProductsPage() {
   const [search, setSearch] = useState("");
   const { toast, showToast } = useToast();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
 
    const fetchProducts = useCallback(async (delay?: number) => {
   if (delay) await new Promise((r) => setTimeout(r, delay));
@@ -1431,7 +1432,6 @@ export default function AdminProductsPage() {
   }, []);
  
   async function handleDelete(productId: string) {
-    if (!window.confirm("Delete this product? This cannot be undone.")) return;
     setDeletingId(productId);
     const res = await fetch("/api/admin/delete-product", {
       method: "POST",
@@ -1440,6 +1440,7 @@ export default function AdminProductsPage() {
     });
     const data = await res.json();
     setDeletingId(null);
+    setDeleteTarget(null);
     if (data.success) {
       showToast("Product deleted");
       fetchProducts();
@@ -1753,7 +1754,7 @@ export default function AdminProductsPage() {
                       Edit
                     </ActionButton>
                     <button
-                      onClick={() => handleDelete(product.id)}
+                      onClick={() => setDeleteTarget(product)}
                       disabled={deletingId === product.id}
                       title="Delete product"
                       style={{
@@ -1788,6 +1789,158 @@ export default function AdminProductsPage() {
         showToast={showToast}
       />
     )}
+
+      {deleteTarget && (
+        <>
+          <div
+            onClick={() => setDeleteTarget(null)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.75)",
+              backdropFilter: "blur(6px)",
+              zIndex: 99998,
+            }}
+          />
+          <div
+            style={{
+              position: "fixed",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              width: "min(420px, calc(100vw - 48px))",
+              background: "#0d1117",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: "18px",
+              padding: "28px",
+              zIndex: 99999,
+              display: "flex",
+              flexDirection: "column",
+              gap: "20px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "10px",
+                  background: "rgba(248,113,113,0.08)",
+                  border: "1px solid rgba(248,113,113,0.22)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#f87171"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M3 6h18" />
+                  <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                  <line x1="10" y1="11" x2="10" y2="17" />
+                  <line x1="14" y1="11" x2="14" y2="17" />
+                </svg>
+              </div>
+              <div>
+                <p
+                  style={{
+                    fontFamily: "monospace",
+                    fontSize: "8px",
+                    fontWeight: 800,
+                    letterSpacing: "0.22em",
+                    textTransform: "uppercase",
+                    color: "rgba(240,244,248,0.3)",
+                    margin: "0 0 3px",
+                  }}
+                >
+                  Delete Product
+                </p>
+                <h3
+                  style={{
+                    fontFamily: "Bebas Neue, sans-serif",
+                    fontSize: "1.4rem",
+                    letterSpacing: "0.05em",
+                    color: "#f0f4f8",
+                    margin: 0,
+                  }}
+                >
+                  {deleteTarget.title}
+                </h3>
+              </div>
+            </div>
+
+            <p
+              style={{
+                fontFamily: "Poppins, sans-serif",
+                fontSize: 12,
+                color: "rgba(240,244,248,0.55)",
+                lineHeight: 1.6,
+                margin: 0,
+                background: "rgba(248,113,113,0.05)",
+                border: "1px solid rgba(248,113,113,0.15)",
+                borderRadius: 10,
+                padding: "12px 14px",
+              }}
+            >
+              This will permanently remove the product and all its variants
+              from your store. This cannot be undone.
+            </p>
+
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                onClick={() => setDeleteTarget(null)}
+                disabled={deletingId === deleteTarget.id}
+                style={{
+                  flex: 1,
+                  padding: "13px",
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: "10px",
+                  color: "rgba(240,244,248,0.4)",
+                  fontFamily: "monospace",
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  letterSpacing: "0.14em",
+                  textTransform: "uppercase",
+                  cursor: deletingId === deleteTarget.id ? "not-allowed" : "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDelete(deleteTarget.id)}
+                disabled={deletingId === deleteTarget.id}
+                style={{
+                  flex: 2,
+                  padding: "13px",
+                  background: "#f87171",
+                  border: "none",
+                  borderRadius: "10px",
+                  color: "#0d1117",
+                  fontFamily: "monospace",
+                  fontSize: "10px",
+                  fontWeight: 800,
+                  letterSpacing: "0.2em",
+                  textTransform: "uppercase",
+                  cursor: deletingId === deleteTarget.id ? "not-allowed" : "pointer",
+                  opacity: deletingId === deleteTarget.id ? 0.6 : 1,
+                }}
+              >
+                {deletingId === deleteTarget.id ? "Deleting…" : "Delete Product"}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       <Toast toast={toast} />
     </div>
