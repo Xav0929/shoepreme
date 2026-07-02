@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 const SHOPIFY_ADMIN_URL = `https://${process.env.SHOPIFY_STORE_DOMAIN}/admin/api/2024-01/graphql.json`;
 
@@ -15,14 +15,10 @@ async function adminFetch(query: string, variables?: Record<string, unknown>) {
   return res.json();
 }
 
-export async function GET(req: NextRequest) {
-  const email = req.nextUrl.searchParams.get("email");
-  if (!email) return NextResponse.json({ draftOrders: [] });
-
-  const data = await adminFetch(
-    `
-    query getDraftOrders($query: String!) {
-        draftOrders(first: 20, query: $query, sortKey: NUMBER, reverse: true) {
+export async function GET() {
+  const data = await adminFetch(`
+    query getDraftOrders {
+      draftOrders(first: 50, query: "tag:reserve", sortKey: NUMBER, reverse: true) {
         edges {
           node {
             id
@@ -31,6 +27,8 @@ export async function GET(req: NextRequest) {
             status
             invoiceUrl
             totalPrice
+            email
+            customer { displayName email }
             lineItems(first: 10) {
               edges {
                 node {
@@ -39,16 +37,8 @@ export async function GET(req: NextRequest) {
                   variantTitle
                   originalUnitPrice
                   variant {
-                    image {
-                      url
-                      altText
-                    }
-                    product {
-                      featuredImage {
-                        url
-                        altText
-                      }
-                    }
+                    image { url }
+                    product { featuredImage { url } }
                   }
                 }
               }
@@ -57,15 +47,14 @@ export async function GET(req: NextRequest) {
         }
       }
     }
-  `,
-    { query: `email:'${email}' AND tag:reserve` },
-  );
+  `);
 
   if (data.errors) {
     console.error(
-      "Shopify draftOrders query error:",
+      "Shopify draftOrders admin query error:",
       JSON.stringify(data.errors, null, 2),
     );
+    return NextResponse.json([]);
   }
 
   const edges = data?.data?.draftOrders?.edges ?? [];
@@ -76,6 +65,8 @@ export async function GET(req: NextRequest) {
     status: node.status,
     invoiceUrl: node.invoiceUrl,
     totalPrice: node.totalPrice,
+    email: node.customer?.email ?? node.email,
+    customerName: node.customer?.displayName ?? "Guest",
     lineItems: node.lineItems.edges.map(({ node: item }: any) => ({
       title: item.title,
       quantity: item.quantity,
@@ -85,9 +76,8 @@ export async function GET(req: NextRequest) {
         item.variant?.image?.url ??
         item.variant?.product?.featuredImage?.url ??
         null,
-      imageAlt: item.variant?.image?.altText ?? item.title,
     })),
   }));
 
-  return NextResponse.json({ draftOrders });
+  return NextResponse.json(draftOrders);
 }
