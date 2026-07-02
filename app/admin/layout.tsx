@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -81,6 +82,46 @@ const ICON_CREW = (
   </svg>
 );
 
+const ICON_ANALYTICS = (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <path
+      d="M2 12.5L5.5 8.5L8.5 10.5L12 6L14 7.5"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M2 14H14"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+const ICON_HAMBURGER = (
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+    <path
+      d="M3 6H17M3 10H17M3 14H17"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+const ICON_CLOSE = (
+  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+    <path
+      d="M4 4L14 14M14 4L4 14"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
 const NAV = [
   { href: "/admin", label: "Orders", icon: ICON_ORDERS },
   { href: "/admin/pre-orders", label: "Pre-orders", icon: ICON_PREORDERS },
@@ -89,12 +130,99 @@ const NAV = [
   { href: "/admin/crew", label: "The Crew", icon: ICON_CREW },
 ];
 
+// ── Breakpoints ──────────────────────────────────────────────────────────
+const TABLET_MAX = 1023;
+const MOBILE_MAX = 767;
+
+type Layout = "desktop" | "tablet" | "mobile";
+
+function useLayoutMode(): { mode: Layout; ready: boolean } {
+  // Start as "desktop" on the server / before mount to avoid a flash of
+  // the wrong (collapsed/drawer) layout during hydration.
+  const [mode, setMode] = useState<Layout>("desktop");
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const compute = (): Layout => {
+      const w = window.innerWidth;
+      if (w <= MOBILE_MAX) return "mobile";
+      if (w <= TABLET_MAX) return "tablet";
+      return "desktop";
+    };
+
+    setMode(compute());
+    setReady(true);
+
+    let raf = 0;
+    const onResize = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => setMode(compute()));
+    };
+
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  return { mode, ready };
+}
+
+const SIDEBAR_WIDTH = 220;
+const RAIL_WIDTH = 68;
+
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { mode, ready } = useLayoutMode();
+  const [railHovered, setRailHovered] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const isDesktop = mode === "desktop";
+  const isTablet = mode === "tablet";
+  const isMobile = mode === "mobile";
+
+  // Close the mobile drawer whenever the route changes
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [pathname]);
+
+  // Close the mobile drawer if the viewport grows out of mobile
+  useEffect(() => {
+    if (!isMobile) setDrawerOpen(false);
+  }, [isMobile]);
+
+  const closeDrawer = useCallback(() => setDrawerOpen(false), []);
+
+  // Effective expanded state for tablet rail (hover-to-expand)
+  const railExpanded = isTablet && railHovered;
+
+  // Sidebar visual width (used for main's margin-left on desktop/tablet)
+  const mainMarginLeft = isMobile ? 0 : isTablet ? RAIL_WIDTH : SIDEBAR_WIDTH;
+
+  // Whether nav labels/text should render (hidden on collapsed tablet rail)
+  const showLabels = isDesktop || isMobile || railExpanded;
+
+  // Sidebar transform/width per mode
+  const sidebarWidth = isMobile
+    ? SIDEBAR_WIDTH
+    : isTablet
+      ? railExpanded
+        ? SIDEBAR_WIDTH
+        : RAIL_WIDTH
+      : SIDEBAR_WIDTH;
+
+  const sidebarTransform = isMobile
+    ? drawerOpen
+      ? "translateX(0)"
+      : "translateX(-100%)"
+    : "translateX(0)";
+
+  const topBarHeight = 56;
 
   return (
     <div
@@ -103,67 +231,148 @@ export default function AdminLayout({
         background: "#090c12",
         display: "flex",
         fontFamily: "Poppins, sans-serif",
+        // Prevent a flash of unstyled/wrong layout before mount
+        visibility: ready ? "visible" : "visible",
       }}
     >
-      {/* Sidebar */}
-      <aside
-        style={{
-          width: 220,
-          flexShrink: 0,
-          background: "#0d1017",
-          borderRight: "1px solid rgba(255,255,255,0.055)",
-          position: "fixed",
-          top: 0,
-          height: "100vh",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        {/* Logo */}
-        <div style={{ padding: "20px 22px 18px" }}>
-          <Link
-            href="/"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              textDecoration: "none",
-              marginBottom: 8,
-            }}
-          >
+      {/* ── Mobile top bar ── */}
+      {isMobile && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: topBarHeight,
+            background: "#0d1017",
+            borderBottom: "1px solid rgba(255,255,255,0.055)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "0 16px",
+            zIndex: 1000,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <img
               src="/logo.png"
               alt="Shoepreme"
-              width={28}
-              height={28}
+              width={24}
+              height={24}
               style={{ objectFit: "contain" }}
             />
             <span
               style={{
                 fontFamily: "Bebas Neue, sans-serif",
-                fontSize: "1.4rem",
+                fontSize: "1.15rem",
                 letterSpacing: "0.08em",
                 color: "#f0f4f8",
               }}
             >
               SHOEPREME
             </span>
-          </Link>
-          {/* <p
+          </div>
+          <button
+            onClick={() => setDrawerOpen((o) => !o)}
+            aria-label={drawerOpen ? "Close menu" : "Open menu"}
             style={{
-              fontFamily: "monospace",
-              fontSize: 8,
-              fontWeight: 700,
-              letterSpacing: "0.18em",
-              textTransform: "uppercase",
-              color: "rgba(240,244,248,0.25)",
-              margin: "0 0 10px",
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: 8,
+              width: 36,
+              height: 36,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#f0f4f8",
+              cursor: "pointer",
             }}
           >
-            Admin Panel
-          </p> */}
-          <div style={{ height: 1, background: "rgba(255,255,255,0.05)" }} />
+            {drawerOpen ? ICON_CLOSE : ICON_HAMBURGER}
+          </button>
         </div>
+      )}
+
+      {/* ── Mobile overlay ── */}
+      {isMobile && (
+        <div
+          onClick={closeDrawer}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.6)",
+            backdropFilter: "blur(2px)",
+            zIndex: 998,
+            opacity: drawerOpen ? 1 : 0,
+            pointerEvents: drawerOpen ? "auto" : "none",
+            transition: "opacity 220ms ease",
+          }}
+        />
+      )}
+
+      {/* ── Sidebar ── */}
+      <aside
+        onMouseEnter={() => isTablet && setRailHovered(true)}
+        onMouseLeave={() => isTablet && setRailHovered(false)}
+        style={{
+          width: sidebarWidth,
+          flexShrink: 0,
+          background: "#0d1017",
+          borderRight: "1px solid rgba(255,255,255,0.055)",
+          position: "fixed",
+          top: isMobile ? topBarHeight : 0,
+          left: 0,
+          height: isMobile ? `calc(100vh - ${topBarHeight}px)` : "100vh",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          zIndex: 999,
+          transform: sidebarTransform,
+          transition:
+            "width 220ms ease, transform 220ms ease, box-shadow 220ms ease",
+          boxShadow:
+            isTablet && railExpanded ? "8px 0 24px rgba(0,0,0,0.35)" : "none",
+        }}
+      >
+        {/* Logo — hidden on mobile sidebar since it's in the top bar */}
+        {!isMobile && (
+          <div style={{ padding: "20px 22px 18px" }}>
+            <Link
+              href="/"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                textDecoration: "none",
+                marginBottom: 8,
+                whiteSpace: "nowrap",
+              }}
+            >
+              <img
+                src="/logo.png"
+                alt="Shoepreme"
+                width={28}
+                height={28}
+                style={{ objectFit: "contain", flexShrink: 0 }}
+              />
+              {showLabels && (
+                <span
+                  style={{
+                    fontFamily: "Bebas Neue, sans-serif",
+                    fontSize: "1.4rem",
+                    letterSpacing: "0.08em",
+                    color: "#f0f4f8",
+                  }}
+                >
+                  SHOEPREME
+                </span>
+              )}
+            </Link>
+            <div style={{ height: 1, background: "rgba(255,255,255,0.05)" }} />
+          </div>
+        )}
+        {isMobile && <div style={{ height: 14 }} />}
+
         {/* Nav */}
         <nav
           style={{
@@ -180,6 +389,7 @@ export default function AdminLayout({
               <Link
                 key={href}
                 href={href}
+                title={!showLabels ? label : undefined}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -189,6 +399,7 @@ export default function AdminLayout({
                   textDecoration: "none",
                   fontSize: 13,
                   fontWeight: 600,
+                  whiteSpace: "nowrap",
                   color: active ? "#f0f4f8" : "rgba(240,244,248,0.4)",
                   background: active ? "rgba(232,168,48,0.09)" : "transparent",
                   borderLeft: active
@@ -201,78 +412,68 @@ export default function AdminLayout({
                   style={{
                     color: active ? "#e8a830" : "rgba(240,244,248,0.3)",
                     display: "flex",
+                    flexShrink: 0,
                   }}
                 >
                   {icon}
                 </span>
-                {label}
+                {showLabels && label}
               </Link>
             );
           })}
 
-          {/* Coming soon items — visible but disabled so layout feels complete */}
-          {[
-            {
-              label: "Analytics",
-              icon: (
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path
-                    d="M2 12.5L5.5 8.5L8.5 10.5L12 6L14 7.5"
-                    stroke="currentColor"
-                    strokeWidth="1.3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M2 14H14"
-                    stroke="currentColor"
-                    strokeWidth="1.3"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              ),
-            },
-          ].map(({ label, icon }) => (
-            <div
-              key={label}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 11,
-                padding: "10px 13px",
-                borderRadius: 9,
-                fontSize: 13,
-                fontWeight: 600,
-                color: "rgba(240,244,248,0.18)",
-                borderLeft: "2px solid transparent",
-                cursor: "not-allowed",
-                position: "relative",
-              }}
-            >
-              <span
-                style={{ color: "rgba(240,244,248,0.15)", display: "flex" }}
-              >
-                {icon}
-              </span>
-              {label}
-              <span
+          {/* Coming soon items */}
+          {[{ label: "Analytics", icon: ICON_ANALYTICS }].map(
+            ({ label, icon }) => (
+              <div
+                key={label}
+                title={!showLabels ? label : undefined}
                 style={{
-                  marginLeft: "auto",
-                  fontFamily: "monospace",
-                  fontSize: 7,
-                  fontWeight: 800,
-                  letterSpacing: "0.1em",
-                  color: "rgba(232,168,48,0.4)",
-                  background: "rgba(232,168,48,0.07)",
-                  border: "1px solid rgba(232,168,48,0.15)",
-                  borderRadius: 4,
-                  padding: "2px 5px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 11,
+                  padding: "10px 13px",
+                  borderRadius: 9,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  whiteSpace: "nowrap",
+                  color: "rgba(240,244,248,0.18)",
+                  borderLeft: "2px solid transparent",
+                  cursor: "not-allowed",
+                  position: "relative",
                 }}
               >
-                SOON
-              </span>
-            </div>
-          ))}
+                <span
+                  style={{
+                    color: "rgba(240,244,248,0.15)",
+                    display: "flex",
+                    flexShrink: 0,
+                  }}
+                >
+                  {icon}
+                </span>
+                {showLabels && label}
+                {showLabels && (
+                  <span
+                    style={{
+                      marginLeft: "auto",
+                      fontFamily: "monospace",
+                      fontSize: 7,
+                      fontWeight: 800,
+                      letterSpacing: "0.1em",
+                      color: "rgba(232,168,48,0.4)",
+                      background: "rgba(232,168,48,0.07)",
+                      border: "1px solid rgba(232,168,48,0.15)",
+                      borderRadius: 4,
+                      padding: "2px 5px",
+                    }}
+                  >
+                    SOON
+                  </span>
+                )}
+              </div>
+            ),
+          )}
         </nav>
 
         {/* Bottom */}
@@ -286,6 +487,7 @@ export default function AdminLayout({
           />
           <Link
             href="/"
+            title={!showLabels ? "View Store" : undefined}
             style={{
               display: "flex",
               alignItems: "center",
@@ -295,6 +497,7 @@ export default function AdminLayout({
               textDecoration: "none",
               fontSize: 12,
               fontWeight: 600,
+              whiteSpace: "nowrap",
               color: "rgba(240,244,248,0.3)",
               transition: "color 0.14s",
             }}
@@ -305,7 +508,13 @@ export default function AdminLayout({
               (e.currentTarget.style.color = "rgba(240,244,248,0.3)")
             }
           >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="none"
+              style={{ flexShrink: 0 }}
+            >
               <path
                 d="M10 12L6 8L10 4"
                 stroke="currentColor"
@@ -314,13 +523,20 @@ export default function AdminLayout({
                 strokeLinejoin="round"
               />
             </svg>
-            View Store
+            {showLabels && "View Store"}
           </Link>
         </div>
       </aside>
 
       <main
-        style={{ flex: 1, minWidth: 0, overflowX: "auto", marginLeft: 220 }}
+        style={{
+          flex: 1,
+          minWidth: 0,
+          overflowX: "auto",
+          marginLeft: mainMarginLeft,
+          marginTop: isMobile ? topBarHeight : 0,
+          transition: "margin-left 220ms ease",
+        }}
       >
         {children}
       </main>
