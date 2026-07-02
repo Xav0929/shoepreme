@@ -19,15 +19,17 @@ async function adminFetch(query: string, variables?: Record<string, unknown>) {
 
 async function getCancelModel() {
   const { default: mongoose } = await import("mongoose");
-  return mongoose.models.CancelRequest ??
-    mongoose.model("CancelRequest", new mongoose.Schema({
-      orderId: String,
-      customerEmail: String,
-      requestedAt: { type: Date, default: Date.now },
-      status: { type: String, default: "cancelled" },
-      shopifyCancelled: { type: Boolean, default: false },
-      shopifyError: { type: String, default: null },
-    }));
+  // Always delete cached model to ensure schema with reason field is used
+  delete mongoose.models.CancelRequest;
+  return mongoose.model("CancelRequest", new mongoose.Schema({
+    orderId: String,
+    customerEmail: String,
+    reason: { type: String, default: null },
+    requestedAt: { type: Date, default: Date.now },
+    status: { type: String, default: "cancelled" },
+    shopifyCancelled: { type: Boolean, default: false },
+    shopifyError: { type: String, default: null },
+  }));
 }
 
 export async function GET(
@@ -77,6 +79,9 @@ export async function POST(
     }
 
     const { id } = await params;
+    const body = await request.json().catch(() => ({}));
+    const reason = body.reason ?? null;
+  
 
     // 1. Cancel in Shopify
     const shopifyData = await adminFetch(
@@ -109,6 +114,7 @@ export async function POST(
       await CancelRequest.create({
         orderId: id,
         customerEmail: session.user.email,
+        reason,
         shopifyCancelled,
         shopifyError: shopifyErrors?.[0]?.message ?? null,
       });

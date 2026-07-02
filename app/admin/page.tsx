@@ -66,6 +66,7 @@ export default function AdminOrdersPage() {
   const [trackingOrder, setTrackingOrder] = useState<any | null>(null);
   const [trackingCarrier, setTrackingCarrier] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
+  const [cancelConfirmOrder, setCancelConfirmOrder] = useState<any | null>(null);
   const [localInProgress, setLocalInProgress] = useState<Set<string>>(() => {
     try {
       const stored = localStorage.getItem("shoepreme_inprogress");
@@ -137,7 +138,14 @@ export default function AdminOrdersPage() {
 
   async function handleCancel(e: React.MouseEvent, orderId: string) {
     e.stopPropagation();
-    if (!confirm("Cancel this order? This cannot be undone.")) return;
+    const order = orders.find((o) => o.id === orderId);
+    setCancelConfirmOrder(order);
+  }
+
+  async function handleCancelConfirmed() {
+    if (!cancelConfirmOrder) return;
+    const orderId = cancelConfirmOrder.id;
+    setCancelConfirmOrder(null);
     setActionLoading(orderId);
     try {
       const res = await fetch("/api/admin/cancel-order", {
@@ -943,6 +951,31 @@ export default function AdminOrdersPage() {
                           </p>
                         </div>
 
+                        {isVoided && (
+                          <div>
+                            <FieldLabel>Cancellation Reason</FieldLabel>
+                            <div style={{
+                              background: "rgba(248,113,113,0.05)",
+                              border: "1px solid rgba(248,113,113,0.15)",
+                              borderRadius: 10,
+                              padding: "10px 14px",
+                            }}>
+                              <p style={{
+                                fontFamily: "monospace",
+                                fontSize: 11,
+                                color: order.customCancelReason
+                                  ? "rgba(240,244,248,0.65)"
+                                  : "rgba(240,244,248,0.25)",
+                                margin: 0,
+                                letterSpacing: "0.03em",
+                                lineHeight: 1.5,
+                              }}>
+                                {order.customCancelReason ?? "No reason provided"}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
                         {tracking.length > 0 && (
                           <div>
                             <FieldLabel>Tracking</FieldLabel>
@@ -1357,6 +1390,47 @@ export default function AdminOrdersPage() {
                 }}
               >
                 Confirm Payment
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Cancel Confirm Modal ── */}
+      {cancelConfirmOrder && (
+        <>
+          <div
+            onClick={() => setCancelConfirmOrder(null)}
+            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)", zIndex: 99998 }}
+          />
+          <div style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "min(400px, calc(100vw - 48px))", background: "#0d1117", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "18px", padding: "28px", zIndex: 99999, display: "flex", flexDirection: "column", gap: "20px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+              <div style={{ width: "44px", height: "44px", borderRadius: "12px", background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><path d="M15 9l-6 6M9 9l6 6" /></svg>
+              </div>
+              <div>
+                <p style={{ fontFamily: "monospace", fontSize: "8px", fontWeight: 800, letterSpacing: "0.28em", textTransform: "uppercase", color: "rgba(248,113,113,0.5)", margin: "0 0 3px" }}>{cancelConfirmOrder.name}</p>
+                <h3 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: "1.6rem", letterSpacing: "0.06em", color: "#f0f4f8", margin: 0 }}>Cancel this order?</h3>
+              </div>
+            </div>
+            <div style={{ background: "rgba(248,113,113,0.04)", border: "1px solid rgba(248,113,113,0.12)", borderRadius: "12px", padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <p style={{ fontFamily: "monospace", fontSize: "9px", fontWeight: 800, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(240,244,248,0.3)", margin: "0 0 3px" }}>{cancelConfirmOrder.customer?.displayName ?? "Guest"}</p>
+                <p style={{ fontFamily: "monospace", fontSize: "9px", color: "rgba(240,244,248,0.25)", margin: 0 }}>{cancelConfirmOrder.customer?.email ?? ""}</p>
+              </div>
+              <span style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: "1.4rem", letterSpacing: "0.06em", color: "#f87171" }}>
+                {formatPrice(cancelConfirmOrder.totalPriceSet.shopMoney.amount, cancelConfirmOrder.totalPriceSet.shopMoney.currencyCode)}
+              </span>
+            </div>
+            <p style={{ fontFamily: "monospace", fontSize: "10px", color: "rgba(240,244,248,0.35)", letterSpacing: "0.04em", margin: 0, lineHeight: 1.7 }}>
+              This will void the order in Shopify and restock inventory. This action cannot be undone.
+            </p>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button onClick={() => setCancelConfirmOrder(null)} style={{ flex: 1, padding: "13px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "10px", color: "rgba(240,244,248,0.4)", fontFamily: "monospace", fontSize: "10px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", cursor: "pointer" }}>
+                Keep Order
+              </button>
+              <button onClick={handleCancelConfirmed} style={{ flex: 1, padding: "13px", background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", borderRadius: "10px", color: "#f87171", fontFamily: "monospace", fontSize: "10px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", cursor: "pointer" }}>
+                Yes, Cancel
               </button>
             </div>
           </div>

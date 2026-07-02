@@ -304,9 +304,52 @@ export async function getOrders(first = 20) {
     return [];
   }
 
-  return data?.data?.orders?.edges?.map((e: any) => e.node) ?? [];
-}
+  const orders = data?.data?.orders?.edges?.map((e: any) => e.node) ?? [];
 
+  // Merge custom cancel reasons from MongoDB
+  try {
+    const { connectToDatabase } = await import("@/lib/mongodb");
+    const { default: mongoose } = await import("mongoose");
+    await connectToDatabase();
+
+    delete mongoose.models.CancelRequest;
+    const CancelRequest = mongoose.model("CancelRequest", new mongoose.Schema({
+      orderId: String,
+      customerEmail: String,
+      reason: { type: String, default: null },
+      requestedAt: { type: Date, default: Date.now },
+      status: { type: String, default: "cancelled" },
+      shopifyCancelled: { type: Boolean, default: false },
+      shopifyError: { type: String, default: null },
+    }));
+
+    const cancelledOrderIds = orders
+      .map((o: any) => o.id.split("/").pop()?.split("?")[0])
+      .filter(Boolean);
+
+    const records = await CancelRequest.find({
+      orderId: { $in: cancelledOrderIds },
+    }).lean();
+
+    const reasonMap = new Map(
+      records.map((r: any) => [r.orderId, r.reason])
+    );
+ 
+
+    return orders.map((o: any) => {
+      const numericId = o.id.split("/").pop()?.split("?")[0];
+      const customReason = reasonMap.get(numericId);
+      return {
+        ...o,
+        customCancelReason: customReason ?? null,
+      };
+    });
+  } catch (err) {
+    console.error("Failed to merge cancel reasons:", err);
+    return orders;
+  }
+}
+  
 export async function getProductById(id: string) {
   const data = await adminFetch(
     `
@@ -1474,8 +1517,6 @@ export async function markOrderDelivered(orderId: string) {
 
   const errors = data?.data?.fulfillmentEventCreate?.userErrors;
   if (errors?.length) return { success: false, error: errors[0].message };
-
-  await addOrderTag(orderId, "delivered");
   return { success: true };
 }
 export async function publishToOnlineStore(productId: string) {
