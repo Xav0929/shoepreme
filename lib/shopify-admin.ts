@@ -313,15 +313,18 @@ export async function getOrders(first = 20) {
     await connectToDatabase();
 
     delete mongoose.models.CancelRequest;
-    const CancelRequest = mongoose.model("CancelRequest", new mongoose.Schema({
-      orderId: String,
-      customerEmail: String,
-      reason: { type: String, default: null },
-      requestedAt: { type: Date, default: Date.now },
-      status: { type: String, default: "cancelled" },
-      shopifyCancelled: { type: Boolean, default: false },
-      shopifyError: { type: String, default: null },
-    }));
+    const CancelRequest = mongoose.model(
+      "CancelRequest",
+      new mongoose.Schema({
+        orderId: String,
+        customerEmail: String,
+        reason: { type: String, default: null },
+        requestedAt: { type: Date, default: Date.now },
+        status: { type: String, default: "cancelled" },
+        shopifyCancelled: { type: Boolean, default: false },
+        shopifyError: { type: String, default: null },
+      }),
+    );
 
     const cancelledOrderIds = orders
       .map((o: any) => o.id.split("/").pop()?.split("?")[0])
@@ -331,10 +334,7 @@ export async function getOrders(first = 20) {
       orderId: { $in: cancelledOrderIds },
     }).lean();
 
-    const reasonMap = new Map(
-      records.map((r: any) => [r.orderId, r.reason])
-    );
- 
+    const reasonMap = new Map(records.map((r: any) => [r.orderId, r.reason]));
 
     return orders.map((o: any) => {
       const numericId = o.id.split("/").pop()?.split("?")[0];
@@ -349,7 +349,7 @@ export async function getOrders(first = 20) {
     return orders;
   }
 }
-  
+
 export async function getProductById(id: string) {
   const data = await adminFetch(
     `
@@ -785,7 +785,8 @@ export async function createProduct(input: {
   if (!product) return { success: false, error: "Product creation failed" };
 
   await publishToOnlineStore(product.id);
-  if (input.productType) await addProductToCollection(product.id, input.productType);
+  if (input.productType)
+    await addProductToCollection(product.id, input.productType);
 
   const locationId = await getPrimaryLocationId();
 
@@ -1276,7 +1277,8 @@ export async function startFulfillmentProgress(orderId: string) {
       { id: fo.node.id },
     );
 
-    const submitErrors = submitData?.data?.fulfillmentOrderSubmitFulfillmentRequest?.userErrors;
+    const submitErrors =
+      submitData?.data?.fulfillmentOrderSubmitFulfillmentRequest?.userErrors;
 
     if (!submitErrors?.length) {
       const acceptData = await adminFetch(
@@ -1291,7 +1293,8 @@ export async function startFulfillmentProgress(orderId: string) {
         { id: fo.node.id, message: "Processing order" },
       );
 
-      const acceptErrors = acceptData?.data?.fulfillmentOrderAcceptFulfillmentRequest?.userErrors;
+      const acceptErrors =
+        acceptData?.data?.fulfillmentOrderAcceptFulfillmentRequest?.userErrors;
 
       if (!acceptErrors?.length) {
         return { success: true, mode: "real" };
@@ -1303,7 +1306,8 @@ export async function startFulfillmentProgress(orderId: string) {
   const tagResult = await addOrderTag(orderId, "in-progress");
   if (!tagResult.success) return tagResult;
   return { success: true, mode: "tag" };
-}export async function addOrderTag(orderId: string, tag: string) {
+}
+export async function addOrderTag(orderId: string, tag: string) {
   const data = await adminFetch(
     `
     mutation addTags($id: ID!, $tags: [String!]!) {
@@ -1537,7 +1541,7 @@ export async function publishToOnlineStore(productId: string) {
           userErrors { field message }
         }
       }`,
-      { id: productId, input: [{ publicationId: node.id }] }
+      { id: productId, input: [{ publicationId: node.id }] },
     );
   }
 
@@ -1598,18 +1602,22 @@ export async function getCollections() {
   return data?.data?.collections?.edges?.map((e: any) => e.node) ?? [];
 }
 const CATEGORY_COLLECTION_MAP: Record<string, string> = {
-  "Men": "gid://shopify/Collection/339158302915",
-  "Women": "gid://shopify/Collection/339158335683",
+  Men: "gid://shopify/Collection/339158302915",
+  Women: "gid://shopify/Collection/339158335683",
   "Basketball & Court": "gid://shopify/Collection/338953076931",
-  "Running": "gid://shopify/Collection/338984304835",
-  "Trail": "gid://shopify/Collection/338984337603",
-  "Sneakers": "gid://shopify/Collection/339403899075",
+  Running: "gid://shopify/Collection/338984304835",
+  Trail: "gid://shopify/Collection/338984337603",
+  Sneakers: "gid://shopify/Collection/339403899075",
   "In-Store": "gid://shopify/Collection/339158237379",
-  "Sale": "gid://shopify/Collection/339402653891",
+  Sale: "gid://shopify/Collection/339402653891",
   "New In Stock": "gid://shopify/Collection/341517861059",
+  "Pre-order": "gid://shopify/Collection/643383328963",
 };
 
-export async function addProductToCollection(productId: string, productType: string) {
+export async function addProductToCollection(
+  productId: string,
+  productType: string,
+) {
   const collectionId = CATEGORY_COLLECTION_MAP[productType];
   if (!collectionId) return { success: false, error: "No matching collection" };
 
@@ -1647,7 +1655,8 @@ export async function releaseFulfillmentHold(orderId: string) {
   const edges = foData?.data?.order?.fulfillmentOrders?.edges ?? [];
   const fo = edges.find((e: any) => e.node.status === "ON_HOLD");
 
-  if (!fo) return { success: false, error: "No on-hold fulfillment order found" };
+  if (!fo)
+    return { success: false, error: "No on-hold fulfillment order found" };
 
   const data = await adminFetch(
     `

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import Link from "next/link";
 import { signIn, useSession } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -271,21 +270,39 @@ function LoginForm() {
         gap: "20px",
       }}
     >
-
       {isCheckout && (
-        <div style={{
-          background: "rgba(232,168,48,0.07)",
-          border: "1px solid rgba(232,168,48,0.22)",
-          borderRadius: 10,
-          padding: "12px 16px",
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-        }}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#e8a830" strokeWidth="2" strokeLinecap="round">
-            <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+        <div
+          style={{
+            background: "rgba(232,168,48,0.07)",
+            border: "1px solid rgba(232,168,48,0.22)",
+            borderRadius: 10,
+            padding: "12px 16px",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#e8a830"
+            strokeWidth="2"
+            strokeLinecap="round"
+          >
+            <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
           </svg>
-          <p style={{ fontFamily: "monospace", fontSize: 10, color: "#e8a830", letterSpacing: "0.05em", margin: 0, lineHeight: 1.5 }}>
+          <p
+            style={{
+              fontFamily: "monospace",
+              fontSize: 10,
+              color: "#e8a830",
+              letterSpacing: "0.05em",
+              margin: 0,
+              lineHeight: 1.5,
+            }}
+          >
             Sign in to complete your purchase. Your cart is saved.
           </p>
         </div>
@@ -501,24 +518,6 @@ export default function LoginPage() {
           <Suspense fallback={<div style={{ height: "120px" }} />}>
             <LoginForm />
           </Suspense>
-
-          <p
-            style={{
-              textAlign: "center",
-              fontFamily: "monospace",
-              fontSize: "10px",
-              color: "rgba(245,247,249,0.28)",
-              letterSpacing: "0.06em",
-            }}
-          >
-            No account yet?{" "}
-            <Link
-              href="/account/signup"
-              style={{ color: "#e8a830", textDecoration: "none" }}
-            >
-              Create one →
-            </Link>
-          </p>
         </div>
       </section>
       <Footer />
