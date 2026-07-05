@@ -26,27 +26,23 @@ function AdminLoginForm() {
 
     setIsPending(true);
 
-    // ── TEMP HARDCODED LOGIN FOR PREVIEW — REMOVE ONCE BACKEND IS WIRED ──
-    const DEMO_ACCOUNTS: Record<
-      string,
-      { password: string; role: "owner" | "staff"; name: string }
-    > = {
-      owner: { password: "0204060801", role: "owner", name: "Owner Demo" },
-      staff: { password: "0204060801", role: "staff", name: "Staff Demo" },
-    };
-    const demo = DEMO_ACCOUNTS[username.trim().toLowerCase()];
-    if (demo && demo.password === password) {
+const res = await fetch("/api/admin/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: username.trim(), password }),
+    });
+    const data = await res.json();
+    if (data.success) {
       document.cookie = `demo-admin-session=${encodeURIComponent(
-        JSON.stringify({ name: demo.name, role: demo.role }),
+        JSON.stringify({ name: data.name, role: data.role }),
       )}; path=/; max-age=86400`;
-      router.push(callbackUrl);
-      router.refresh();
+      // Small delay to ensure cookie is set before redirect
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      window.location.href = "/admin";
       return;
     }
     setError("Invalid username or password.");
     setIsPending(false);
-    return;
-    // ── END TEMP BLOCK ──
   }
 
   return (
