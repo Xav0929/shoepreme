@@ -329,6 +329,7 @@ function LoginForm() {
           </p>
         </div>
       )}
+      {error === "AccountDisabled" && (
         <div
           style={{
             background: "rgba(248,113,113,0.08)",
@@ -363,6 +364,7 @@ function LoginForm() {
             </span>
           </div>
         </div>
+      )}
     
 
       {showAppeal && (
