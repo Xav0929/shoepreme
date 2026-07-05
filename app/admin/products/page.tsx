@@ -1263,16 +1263,48 @@ function ProductModal({
                         <span
                           key={e.node.id}
                           style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 5,
                             background: "rgba(255,255,255,0.05)",
                             border: "1px solid rgba(255,255,255,0.1)",
                             borderRadius: 5,
-                            padding: "3px 8px",
+                            padding: "3px 6px 3px 8px",
                             fontFamily: "monospace",
                             fontSize: 9,
                             color: "rgba(240,244,248,0.5)",
                           }}
                         >
                           {e.node.title}
+                          <button
+                            onClick={async () => {
+                              const res = await fetch("/api/admin/remove-from-collection", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ productId: product.id, collectionId: e.node.id }),
+                              });
+                              const data = await res.json();
+                              if (data.success) {
+                                showToast("Removed from collection ✓");
+                                onSizeAdded(product.id);
+                              } else {
+                                showToast("Failed: " + data.error, false);
+                              }
+                            }}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              color: "rgba(248,113,113,0.6)",
+                              cursor: "pointer",
+                              fontSize: 12,
+                              lineHeight: 1,
+                              padding: 0,
+                              display: "flex",
+                              alignItems: "center",
+                            }}
+                          >
+                            ×
+                          </button>
                         </span>
                       ))}
                     </div>

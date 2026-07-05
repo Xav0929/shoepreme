@@ -1,6 +1,6 @@
 const SHOPIFY_ADMIN_URL = `https://${process.env.SHOPIFY_STORE_DOMAIN}/admin/api/2024-01/graphql.json`;
 
-async function adminFetch(query: string, variables?: Record<string, unknown>) {
+export async function adminFetch(query: string, variables?: Record<string, unknown>) {
   const res = await fetch(SHOPIFY_ADMIN_URL, {
     method: "POST",
     headers: {

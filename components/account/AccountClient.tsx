@@ -40,6 +40,7 @@ const STATUS_COLORS: Record<string, string> = {
   UNFULFILLED: "rgba(245,247,249,0.4)",
   PARTIALLY_FULFILLED: "#e8a830",
   IN_PROGRESS: "#e8a830",
+  ON_HOLD: "#a78bfa",
 };
 
 function statusColor(label: string) {
@@ -254,6 +255,11 @@ const ORDER_TABS: {
     label: "Completed",
     filter: (o) =>
       o.fulfillmentStatus === "FULFILLED" && o.financialStatus === "PAID",
+  },
+  {
+    key: "on-hold",
+    label: "On Hold",
+    filter: (o) => o.fulfillmentStatus === "ON_HOLD",
   },
   {
     key: "cancelled",
@@ -1112,6 +1118,104 @@ function OrderDetail({
           </p>
         </div>
       )}
+      {/* On Hold Banner */}
+      {order.fulfillmentStatus === "ON_HOLD" && (
+        <div
+          style={{
+            background: "rgba(167,139,250,0.06)",
+            border: "1px solid rgba(167,139,250,0.2)",
+            borderRadius: "16px",
+            padding: "20px 24px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "10px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <div
+              style={{
+                width: "36px",
+                height: "36px",
+                borderRadius: "10px",
+                background: "rgba(167,139,250,0.12)",
+                border: "1px solid rgba(167,139,250,0.25)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 8v4M12 16h.01" />
+              </svg>
+            </div>
+            <div>
+              <p
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "8px",
+                  fontWeight: 800,
+                  letterSpacing: "0.22em",
+                  textTransform: "uppercase",
+                  color: "rgba(167,139,250,0.6)",
+                  margin: "0 0 2px",
+                }}
+              >
+                Order On Hold
+              </p>
+              <p
+                style={{
+                  fontFamily: "Bebas Neue, sans-serif",
+                  fontSize: "1.1rem",
+                  letterSpacing: "0.04em",
+                  color: "#a78bfa",
+                  margin: 0,
+                }}
+              >
+                Your order is temporarily paused
+              </p>
+            </div>
+          </div>
+          <p
+            style={{
+              fontFamily: "monospace",
+              fontSize: "9px",
+              color: "rgba(167,139,250,0.6)",
+              letterSpacing: "0.04em",
+              margin: 0,
+              lineHeight: 1.7,
+            }}
+          >
+            The store has placed this order on hold. This may be due to stock confirmation, payment verification, or other reasons. We'll notify you once it resumes. You may message us for updates.
+          </p>
+          
+            <a href="https://m.me/shoepreme"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "10px 16px",
+              background: "rgba(167,139,250,0.08)",
+              border: "1px solid rgba(167,139,250,0.25)",
+              borderRadius: "8px",
+              color: "#a78bfa",
+              fontFamily: "monospace",
+              fontSize: "9px",
+              fontWeight: 700,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              textDecoration: "none",
+              alignSelf: "flex-start",
+            }}
+          >
+            Message Us →
+          </a>
+        </div>
+      )}
+
       {/* Items */}
       <div>
         <p
