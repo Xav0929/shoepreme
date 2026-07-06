@@ -760,7 +760,11 @@ export default function AdminOrdersPage() {
 
                         <StatusPill label={order.displayFinancialStatus} />
                         {!isMobile && (
-                          <StatusPill label={order.displayFulfillmentStatus} />
+                          <StatusPill label={
+                            inProgress ? "IN_PROGRESS" :
+                            isDelivered ? "DELIVERED" :
+                            order.displayFulfillmentStatus
+                          } />
                         )}
 
                         {!isMobile && (

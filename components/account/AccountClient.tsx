@@ -1753,12 +1753,7 @@ function OrderDetail({
               )}
             </div>
           </div>
-          {order.cancelReason && (
-            <div style={{ background: "rgba(248,113,113,0.04)", border: "1px solid rgba(248,113,113,0.12)", borderRadius: "10px", padding: "12px 16px" }}>
-              <p style={{ fontFamily: "monospace", fontSize: "8px", fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(248,113,113,0.4)", margin: "0 0 4px" }}>Reason</p>
-              <p style={{ fontFamily: "monospace", fontSize: "10px", color: "rgba(245,247,249,0.5)", letterSpacing: "0.04em", margin: 0, lineHeight: 1.6 }}>{order.cancelReason}</p>
-            </div>
-          )}
+          
           {/* Buy Again */}
           
             <a href="/products"
@@ -2212,12 +2207,12 @@ function TrackOrderSidebar({
     {
       label: "Out for Delivery",
       sub: "Your order is on the way",
-      status: currentStage >= 4 ? "done" : currentStage === 3 ? "active" : "pending",
+      status: currentStage > 3 ? "done" : currentStage === 3 ? "active" : "pending",
     },
     {
       label: "Delivered",
       sub: "Order has been received",
-      status: currentStage >= 4 ? "done" : currentStage === 3 ? "active" : "pending",
+      status: currentStage >= 4 ? "active" : "pending",
     },
   ];
 

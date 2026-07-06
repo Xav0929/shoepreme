@@ -202,6 +202,46 @@ export async function GET(request: NextRequest) {
       })(),
     }));
 
+    // Merge custom cancel reasons from MongoDB
+    try {
+      const { connectToDatabase } = await import("@/lib/mongodb");
+      const { default: mongoose } = await import("mongoose");
+      await connectToDatabase();
+
+      delete mongoose.models.CancelRequest;
+      const CancelRequest = mongoose.model(
+        "CancelRequest",
+        new mongoose.Schema({
+          orderId: String,
+          reason: { type: String, default: null },
+        }),
+      );
+
+      const numericOrderIds = orders.map((o: any) =>
+        o.id.split("/").pop()?.split("?")[0],
+      ).filter(Boolean);
+
+      const records = await CancelRequest.find({
+        orderId: { $in: numericOrderIds },
+      }).lean();
+
+      const reasonMap = new Map(
+        records.map((r: any) => [r.orderId, r.reason]),
+      );
+
+      const ordersWithReasons = orders.map((o: any) => {
+        const numericId = o.id.split("/").pop()?.split("?")[0];
+        return {
+          ...o,
+          customCancelReason: reasonMap.get(numericId) ?? null,
+        };
+      });
+
+      return NextResponse.json({ orders: ordersWithReasons });
+    } catch (err) {
+      console.error("[orders] Failed to merge custom cancel reasons:", err);
+    }
+
     return NextResponse.json({ orders });
   } catch (err) {
     console.error("[GET /api/account-api/orders]", err);
