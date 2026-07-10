@@ -101,6 +101,28 @@ const ICON_ANALYTICS = (
   </svg>
 );
 
+const ICON_HERO = (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <rect
+      x="2"
+      y="2.5"
+      width="12"
+      height="11"
+      rx="1.5"
+      stroke="currentColor"
+      strokeWidth="1.3"
+    />
+    <circle cx="5.5" cy="6" r="1.2" stroke="currentColor" strokeWidth="1.2" />
+    <path
+      d="M2.5 11L6 8L8.5 10L11 7.5L13.5 10.5"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 const ICON_HAMBURGER = (
   <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
     <path
@@ -136,6 +158,12 @@ const NAV = [
     href: "/admin/products",
     label: "Products",
     icon: ICON_PRODUCTS,
+    role: "owner",
+  },
+  {
+    href: "/admin/hero",
+    label: "Hero Slides",
+    icon: ICON_HERO,
     role: "owner",
   },
   {
@@ -625,12 +653,13 @@ export default function AdminLayout({
 
       <main
         style={{
-          flex: 1,
+          width: `calc(100% - ${mainMarginLeft}px)`,
+          maxWidth: `calc(100% - ${mainMarginLeft}px)`,
           minWidth: 0,
-          overflowX: "auto",
+          overflowX: "hidden",
           marginLeft: mainMarginLeft,
           marginTop: isMobile ? topBarHeight : 0,
-          transition: "margin-left 220ms ease",
+          transition: "margin-left 220ms ease, width 220ms ease",
         }}
       >
         {children}

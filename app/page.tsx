@@ -1,21 +1,47 @@
 import Navbar from "@/components/layout/Navbar";
-import Hero from "@/components/sections/Hero";
+import Hero, { HeroProduct } from "@/components/sections/Hero";
 import StorySection from "@/components/sections/StorySection";
 import Footer from "@/components/layout/Footer";
 import ProductCard from "@/components/ui/ProductCard";
 import PreOrderSection from "@/components/sections/PreOrderSection";
 import Link from "next/link";
 import { getAllProducts } from "@/lib/shopify";
+import { connectToDatabase } from "@/lib/mongodb";
+import HeroSlide from "@/models/HeroSlide";
+
+async function getHeroSlides(): Promise<HeroProduct[]> {
+  await connectToDatabase();
+  const slides = await HeroSlide.find({ active: true })
+    .sort({ order: 1 })
+    .lean();
+
+  return slides.map((s: any) => ({
+    id: s._id.toString(),
+    brand: s.brand,
+    name: s.name,
+    sub: s.sub,
+    price: s.price,
+    tag: s.tag,
+    handle: s.productHandle,
+    image: s.image,
+    glow: s.glow,
+    tagColor: s.tagColor,
+    features: s.features,
+  }));
+}
 
 export default async function HomePage() {
-  const products = await getAllProducts(8);
+  const [products, heroSlides] = await Promise.all([
+    getAllProducts(8),
+    getHeroSlides(),
+  ]);
 
   return (
     <main style={{ minHeight: "100vh", background: "#0d1117" }}>
       <Navbar />
 
       <div>
-        <Hero />
+        <Hero featuredProducts={heroSlides} />
 
         {/* Featured Products */}
         <section

@@ -100,11 +100,10 @@ export default function Hero({
 
   const cur = PRODUCTS[active];
 
-  // chip positions relative to card
   const CHIP_POS = [
-    { top: "8%", left: "-22%" },
-    { top: "42%", right: "-24%" },
-    { bottom: "12%", left: "-20%" },
+    { top: "22%", left: "-22%" },
+    { top: "50%", right: "-24%" },
+    { bottom: "10%", left: "-20%" },
   ];
 
   return (
@@ -121,17 +120,14 @@ export default function Hero({
         }}
         aria-hidden="true"
       />
+
       <section
-        className="hero-section relative w-full bg-[#0d1117] overflow-hidden"
+        className="hero-section relative w-full bg-[#0d1117] overflow-hidden flex flex-col items-center"
         style={{
-          height: "100dvh",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
+          minHeight: "100dvh",
           paddingTop: "clamp(64px, 10vh, 101px)",
         }}
       >
-        {/* Noise overlay */}
         <div
           className="absolute inset-0 pointer-events-none z-0"
           style={{
@@ -151,7 +147,6 @@ export default function Hero({
             paddingBottom: "clamp(16px, 2.5vh, 28px)",
           }}
         >
-          {/* Kicker */}
           <div className="flex items-center gap-2 mb-3">
             <span className="w-[6px] h-[6px] rounded-full bg-[#e8a830] shrink-0 animate-[kDot_2s_ease-in-out_infinite]" />
             <span className="font-mono text-[9px] font-extrabold tracking-[0.26em] uppercase text-white/40">
@@ -162,7 +157,6 @@ export default function Hero({
               PH · JP · TW · US
             </span>
           </div>
-          {/* H1 */}
           <h1
             className="font-['Bebas_Neue'] leading-none tracking-[0.02em] m-0"
             style={{ fontSize: "clamp(1.9rem, 4.5vw, 3.5rem)" }}
@@ -177,19 +171,16 @@ export default function Hero({
           </h1>
         </div>
 
-        {/* ─── STAGE ─── */}
-        {/*
-        Key: stage is position:relative, full width, fixed height.
-        Cards are position:absolute with left:50% + translateX(-50%) so they
-        all anchor to the true horizontal center of this container.
-      */}
+        {/* ─── STAGE (plate + shoe only — no caption inside) ─── */}
         <div
           className="relative z-10 w-full overflow-visible hero-stage"
-          style={{ minHeight: "240px", flex: "1 1 auto" }}
+          style={{
+            height: "clamp(220px, 34vh, 320px)",
+            marginTop: "8px",
+          }}
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
         >
-          {/* Center spot glow */}
           <div
             className="absolute inset-0 pointer-events-none transition-[background] duration-[800ms]"
             style={{
@@ -198,7 +189,6 @@ export default function Hero({
             aria-hidden="true"
           />
 
-          {/* Floor shadow */}
           <div
             className="absolute pointer-events-none"
             style={{
@@ -214,7 +204,6 @@ export default function Hero({
             aria-hidden="true"
           />
 
-          {/* Rotating ring */}
           <svg
             className="absolute pointer-events-none animate-[ringSpin_40s_linear_infinite]"
             style={{
@@ -238,7 +227,6 @@ export default function Hero({
             />
           </svg>
 
-          {/* Prev arrow */}
           {n > 1 && (
             <button
               onClick={() => go(active - 1)}
@@ -267,7 +255,6 @@ export default function Hero({
             </button>
           )}
 
-          {/* Cards */}
           {PRODUCTS.map((p, i) => {
             const offset = getOffset(i);
             const abs = Math.abs(offset);
@@ -281,7 +268,7 @@ export default function Hero({
             const sc = p.imgScale ?? 1;
             const tilt = p.rotate ?? (isActive ? 0 : dir * 3);
 
-            const cardW = "clamp(200px, min(72vw, 44vh), 320px)";
+            const cardW = "clamp(190px, min(58vw, 40vh), 300px)";
 
             return (
               <button
@@ -303,7 +290,6 @@ export default function Hero({
                     "transform 0.65s cubic-bezier(0.22,1,0.36,1), opacity 0.5s ease, filter 0.5s ease",
                 }}
               >
-                {/* Glass plate */}
                 <div
                   className={`plate-sheen relative w-full overflow-hidden rounded-[18px] border transition-[box-shadow,border-color] duration-500 ${isActive ? "border-white/20 active-plate" : "border-white/[0.07]"}`}
                   style={{
@@ -314,7 +300,6 @@ export default function Hero({
                       : "0 16px 40px rgba(0,0,0,0.4)",
                   }}
                 >
-                  {/* Tag badge */}
                   <span
                     className="absolute top-3 left-3 z-[2] font-mono font-extrabold uppercase rounded-[3px] border"
                     style={{
@@ -330,7 +315,6 @@ export default function Hero({
                   </span>
                 </div>
 
-                {/* Shoe — overflows plate on all sides */}
                 <div
                   className="absolute pointer-events-none flex items-center justify-center"
                   style={{
@@ -395,7 +379,6 @@ export default function Hero({
                   </div>
                 </div>
 
-                {/* Feature chips — desktop only, active card only */}
                 {isActive && p.features && (
                   <div
                     className="absolute inset-0 pointer-events-none hidden lg:block"
@@ -427,59 +410,10 @@ export default function Hero({
                     ))}
                   </div>
                 )}
-
-                {/* Caption below card */}
-                <div
-                  className="mt-4 text-center caption-block"
-                  style={{
-                    opacity: isActive ? 1 : 0,
-                    transform: isActive ? "translateY(0)" : "translateY(6px)",
-                    pointerEvents: isActive ? "auto" : "none",
-                    transition: "opacity 0.35s ease, transform 0.35s ease",
-                    position: "relative",
-                    zIndex: 5,
-                  }}
-                >
-                  <span
-                    className="block font-mono font-extrabold uppercase text-white/35 mb-1"
-                    style={{ fontSize: "7px", letterSpacing: "0.22em" }}
-                  >
-                    {p.brand}
-                  </span>
-                  <div className="flex flex-col items-center gap-0.5">
-                    <span
-                      className="font-['Bebas_Neue'] text-[#f5f7f9] tracking-[0.03em] leading-none"
-                      style={{ fontSize: "clamp(1.2rem, 4vw, 1.75rem)" }}
-                    >
-                      {p.name}
-                    </span>
-                    <span
-                      className="font-['Poppins'] font-bold tracking-[-0.01em]"
-                      style={{
-                        fontSize: "clamp(0.9rem, 3vw, 1.2rem)",
-                        color: p.tagColor,
-                      }}
-                    >
-                      {p.price}
-                    </span>
-                  </div>
-                  <Link
-                    href={`/products/${p.handle}`}
-                    className="inline-block mt-1.5 font-mono font-bold uppercase no-underline transition-opacity duration-200 hover:opacity-55"
-                    style={{
-                      fontSize: "9px",
-                      letterSpacing: "0.18em",
-                      color: p.tagColor,
-                    }}
-                  >
-                    View →
-                  </Link>
-                </div>
               </button>
             );
           })}
 
-          {/* Next arrow */}
           {n > 1 && (
             <button
               onClick={() => go(active + 1)}
@@ -509,13 +443,54 @@ export default function Hero({
           )}
         </div>
 
+        {/* ─── PRODUCT INFO — decoupled, normal flow, can never overlap anything ─── */}
+        <div
+          className="relative z-10 shrink-0 flex flex-col items-center text-center px-6"
+          style={{ marginTop: "10px", paddingBottom: "6px" }}
+        >
+          <span
+            className="block font-mono font-extrabold uppercase text-white/35 mb-1"
+            style={{ fontSize: "7px", letterSpacing: "0.22em" }}
+          >
+            {cur.brand}
+          </span>
+          <div className="flex flex-col items-center gap-0.5">
+            <span
+              className="font-['Bebas_Neue'] text-[#f5f7f9] tracking-[0.03em] leading-none"
+              style={{ fontSize: "clamp(1.2rem, 4vw, 1.75rem)" }}
+            >
+              {cur.name}
+            </span>
+            <span
+              className="font-['Poppins'] font-bold tracking-[-0.01em]"
+              style={{
+                fontSize: "clamp(0.9rem, 3vw, 1.2rem)",
+                color: cur.tagColor,
+              }}
+            >
+              {cur.price}
+            </span>
+          </div>
+          <Link
+            href={`/products/${cur.handle}`}
+            className="inline-block mt-1.5 font-mono font-bold uppercase no-underline transition-opacity duration-200 hover:opacity-55"
+            style={{
+              fontSize: "9px",
+              letterSpacing: "0.18em",
+              color: cur.tagColor,
+            }}
+          >
+            View →
+          </Link>
+        </div>
+
         {/* ─── DOTS + MOBILE ARROWS ─── */}
         {n > 1 && (
           <div
             className="relative z-10 flex justify-center items-center shrink-0"
             style={{
               paddingTop: "clamp(16px, 2.5vh, 24px)",
-              paddingBottom: "clamp(12px, 2vh, 20px)",
+              paddingBottom: "clamp(16px, 2.5vh, 24px)",
               gap: "16px",
             }}
           >
@@ -583,7 +558,7 @@ export default function Hero({
         <div
           className="relative z-10 flex flex-col items-center text-center shrink-0 px-6"
           style={{
-            paddingTop: "clamp(16px, 2vh, 24px)",
+            paddingTop: "clamp(16px, 2.5vh, 24px)",
             paddingBottom: "clamp(32px, 5vh, 56px)",
           }}
         >
@@ -603,7 +578,7 @@ export default function Hero({
                 color: "#0d1117",
                 fontSize: "9px",
                 letterSpacing: "0.22em",
-                padding: "13px 28px",
+                padding: "14px 32px",
                 borderRadius: "2px",
               }}
             >
@@ -638,7 +613,6 @@ export default function Hero({
           </div>
         </div>
 
-        {/* Keyframes + pseudo-element — unavoidable without Tailwind config */}
         <style>{`
         @keyframes kDot {
           0%,100% { box-shadow: 0 0 6px rgba(232,168,48,0.55); }
@@ -664,15 +638,14 @@ export default function Hero({
           transform: translateX(-130%);
           pointer-events: none;
         }
-.active-plate::before {
+        .active-plate::before {
           animation: sheenSweep 4.5s ease-in-out infinite;
         }
-@media (max-width: 639px) {
-  .side-card { opacity: 0 !important; pointer-events: none !important; }
-  .hero-stage { flex: none !important; height: min(68vw, 300px) !important; }
-  .nav-arrow { display: none !important; }
-  .caption-block { margin-top: 12px !important; }
-}
+        @media (max-width: 639px) {
+          .side-card { opacity: 0 !important; pointer-events: none !important; }
+          .hero-stage { height: min(62vw, 270px) !important; }
+          .nav-arrow { display: none !important; }
+        }
       `}</style>
       </section>
     </>
