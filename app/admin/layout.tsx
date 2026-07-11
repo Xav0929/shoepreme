@@ -173,6 +173,7 @@ const NAV = [
     role: "owner",
   },
   { href: "/admin/crew", label: "The Crew", icon: ICON_CREW, role: "owner" },
+  { href: "/admin/bento", label: "Crew Photos", icon: ICON_HERO, role: "owner" },
   {
     href: "/admin/analytics",
     label: "Analytics",

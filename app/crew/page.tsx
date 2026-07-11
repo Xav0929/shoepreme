@@ -60,7 +60,7 @@ const STATS = [
   { label: "Cities", value: 3, suffix: "" },
 ];
 
-const BENTO = [
+const BENTO_DEFAULTS = [
   { src: null, label: "First Crew Run · Jun 15", caption: "Koronadal Oval", size: "hero" },
   { src: null, label: "Drop Night", caption: "Shoepreme Store", size: "sm" },
   { src: null, label: "Race Day", caption: "GenSan Oval", size: "sm" },
@@ -173,7 +173,7 @@ function BentoTile({
   style,
   hero = false,
 }: {
-  item: (typeof BENTO)[number];
+  item: { src: string | null; label: string; caption: string; size: string };
   style?: React.CSSProperties;
   hero?: boolean;
 }) {
@@ -191,43 +191,47 @@ function BentoTile({
       }}
     >
       {/* ── swap this block for <img src={item.src} style={{width:"100%",height:"100%",objectFit:"cover"}} /> once you have photos ── */}
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexDirection: "column",
-          gap: "8px",
-        }}
-      >
-        <svg
-          width={hero ? 40 : 26}
-          height={hero ? 40 : 26}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke={hero ? "rgba(232,168,48,0.3)" : "rgba(232,168,48,0.2)"}
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <rect x="3" y="3" width="18" height="18" rx="2" />
-          <circle cx="8.5" cy="8.5" r="1.5" />
-          <polyline points="21 15 16 10 5 21" />
-        </svg>
-        <span
+      {item.src ? (
+        <img src={item.src} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      ) : (
+        <div
           style={{
-            fontFamily: "monospace",
-            fontSize: "8px",
-            color: "rgba(245,247,249,0.18)",
-            letterSpacing: "0.14em",
-            textTransform: "uppercase",
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexDirection: "column",
+            gap: "8px",
           }}
         >
-          Add Photo
-        </span>
-      </div>
+          <svg
+            width={hero ? 40 : 26}
+            height={hero ? 40 : 26}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke={hero ? "rgba(232,168,48,0.3)" : "rgba(232,168,48,0.2)"}
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <polyline points="21 15 16 10 5 21" />
+          </svg>
+          <span
+            style={{
+              fontFamily: "monospace",
+              fontSize: "8px",
+              color: "rgba(245,247,249,0.18)",
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+            }}
+          >
+            Add Photo
+          </span>
+        </div>
+      )}
       {hero && (
         <div
           style={{
@@ -632,6 +636,29 @@ function CalendarView({ events }: { events: CrewEvent[] }) {
 // Page
 // ─────────────────────────────────────────────────────────────────────────────
 export default function TheCrewPage() {
+  const [bento, setBento] = useState<{ src: string | null; label: string; caption: string; size: string }[]>(BENTO_DEFAULTS);
+
+  useEffect(() => {
+    fetch("/api/admin/bento-photos")
+      .then((r) => r.json())
+      .then((saved: { index: number; src: string | null; label: string; caption: string }[]) => {
+        if (!Array.isArray(saved)) return;
+        setBento((prev) =>
+          prev.map((tile, i) => {
+            const match = saved.find((s) => s.index === i);
+            if (!match) return tile;
+            return {
+              ...tile,
+              src:     match.src     ?? tile.src,
+              label:   match.label   || tile.label,
+              caption: match.caption || tile.caption,
+            };
+          })
+        );
+      })
+      .catch(() => {});
+  }, []);
+
   const [events, setEvents] = useState<CrewEvent[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [filter, setFilter] = useState<"ALL" | "UPCOMING" | "PAST">("ALL");
@@ -1147,7 +1174,7 @@ export default function TheCrewPage() {
             <div
               style={{ display: "flex", flexDirection: "column", gap: "12px" }}
             >
-              {BENTO.map((item, i) => (
+              {bento.map((item, i) => (
                 <BentoTile
                   key={i}
                   item={item}
@@ -1164,7 +1191,7 @@ export default function TheCrewPage() {
                 gap: "12px",
               }}
             >
-              {BENTO.map((item, i) => (
+              {bento.map((item, i) => (
                 <BentoTile
                   key={i}
                   item={item}
@@ -1187,31 +1214,31 @@ export default function TheCrewPage() {
               }}
             >
               <div style={{ gridColumn: "1 / 3", gridRow: "1 / 3" }}>
-                <BentoTile item={BENTO[0]} hero style={{ height: "100%" }} />
+                <BentoTile item={bento[0]} hero style={{ height: "100%" }} />
               </div>
               <div style={{ gridColumn: "3 / 4", gridRow: "1 / 2" }}>
-                <BentoTile item={BENTO[1]} style={{ height: "100%" }} />
+                <BentoTile item={bento[1]} style={{ height: "100%" }} />
               </div>
               <div style={{ gridColumn: "4 / 5", gridRow: "1 / 2" }}>
-                <BentoTile item={BENTO[2]} style={{ height: "100%" }} />
+                <BentoTile item={bento[2]} style={{ height: "100%" }} />
               </div>
               <div style={{ gridColumn: "3 / 4", gridRow: "2 / 3" }}>
-                <BentoTile item={BENTO[3]} style={{ height: "100%" }} />
+                <BentoTile item={bento[3]} style={{ height: "100%" }} />
               </div>
               <div style={{ gridColumn: "4 / 5", gridRow: "2 / 3" }}>
-                <BentoTile item={BENTO[4]} style={{ height: "100%" }} />
+                <BentoTile item={bento[4]} style={{ height: "100%" }} />
               </div>
               <div style={{ gridColumn: "1 / 2", gridRow: "3 / 4" }}>
-                <BentoTile item={BENTO[5]} style={{ height: "100%" }} />
+                <BentoTile item={bento[5]} style={{ height: "100%" }} />
               </div>
               <div style={{ gridColumn: "2 / 3", gridRow: "3 / 4" }}>
-                <BentoTile item={BENTO[6]} style={{ height: "100%" }} />
+                <BentoTile item={bento[6]} style={{ height: "100%" }} />
               </div>
               <div style={{ gridColumn: "3 / 4", gridRow: "3 / 4" }}>
-                <BentoTile item={BENTO[7]} style={{ height: "100%" }} />
+                <BentoTile item={bento[7]} style={{ height: "100%" }} />
               </div>
               <div style={{ gridColumn: "4 / 5", gridRow: "3 / 4" }}>
-                <BentoTile item={BENTO[8]} style={{ height: "100%" }} />
+                <BentoTile item={bento[8]} style={{ height: "100%" }} />
               </div>
             </div>
           )}
