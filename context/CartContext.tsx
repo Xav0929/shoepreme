@@ -13,7 +13,9 @@ import {
   removeCartLines,
   updateCartLines,
   getCart,
+  updateCartBuyerIdentity,
 } from "@/lib/shopify";
+import { useSession } from "next-auth/react";
 
 interface CartLine {
   id: string;
@@ -49,7 +51,11 @@ interface CartContextType {
   isLoading: boolean;
   openCart: () => void;
   closeCart: () => void;
-  addToCart: (merchandiseId: string, quantity?: number, openCartAfter?: boolean) => Promise<Cart>;
+  addToCart: (
+    merchandiseId: string,
+    quantity?: number,
+    openCartAfter?: boolean,
+  ) => Promise<Cart>;
   removeFromCart: (lineId: string) => Promise<void>;
   updateQuantity: (lineId: string, quantity: number) => Promise<void>;
   checkout: () => void;
@@ -59,6 +65,7 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
+  const { data: session } = useSession();
   const [cart, setCart] = useState<Cart | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -74,6 +81,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
         .catch(() => localStorage.removeItem("sp_cart_id"));
     }
   }, []);
+
+  // Sync buyer email onto the cart once we know who's logged in
+  useEffect(() => {
+    const email = session?.user?.email;
+    if (!email || !cart?.id) return;
+    updateCartBuyerIdentity(cart.id, email)
+      .then((updated) => {
+        if (updated) setCart(updated);
+      })
+      .catch(() => {});
+    // only re-run when cart id or email changes, not on every cart update
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart?.id, session?.user?.email]);
 
   const addToCart = useCallback(
     async (merchandiseId: string, quantity = 1, openCartAfter = true) => {
