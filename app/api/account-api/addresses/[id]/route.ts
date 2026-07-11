@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Address } from "@/models/address";
+import {
+  createShopifyCustomerAddress,
+  updateShopifyCustomerAddress,
+} from "@/lib/shopify-admin";
 
 function shape(a: any) {
   return {
@@ -21,13 +25,16 @@ function shape(a: any) {
 // PATCH /api/account-api/addresses/[id]
 export async function PATCH(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await context.params;
 
     if (!id || id.length !== 24) {
-      return NextResponse.json({ error: "Invalid address id" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid address id" },
+        { status: 400 },
+      );
     }
 
     const fields = await request.json();
@@ -40,14 +47,60 @@ export async function PATCH(
 
     await connectToDatabase();
 
+    const before = await Address.findById(id).lean();
+
     const updated = await Address.findByIdAndUpdate(
       id,
       { $set: fields },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     ).lean();
 
     if (!updated) {
       return NextResponse.json({ error: "Address not found" }, { status: 404 });
+    }
+
+    // Mirror update to Shopify (best-effort, non-blocking)
+    try {
+      const u = updated as any;
+      if (u.shopifyAddressId) {
+        const result = await updateShopifyCustomerAddress(
+          u.customerId,
+          u.shopifyAddressId,
+          {
+            firstName: u.firstName,
+            lastName: u.lastName,
+            address1: u.address1,
+            address2: u.address2,
+            city: u.city,
+            province: u.province,
+            zip: u.zip,
+            country: u.country,
+            phone: u.phone,
+          },
+        );
+        if (!result.success)
+          console.error("Shopify address update failed:", result.error);
+      } else if (before) {
+        // No mirrored address yet (created before this feature existed) — create it now
+        const result = await createShopifyCustomerAddress(u.customerId, {
+          firstName: u.firstName,
+          lastName: u.lastName,
+          address1: u.address1,
+          address2: u.address2,
+          city: u.city,
+          province: u.province,
+          zip: u.zip,
+          country: u.country,
+          phone: u.phone,
+        });
+        if (result.success && result.addressId) {
+          await Address.findByIdAndUpdate(id, {
+            shopifyAddressId: result.addressId,
+          });
+        }
+      }
+    } catch (syncErr) {
+      console.error("Shopify address mirror (update) threw:", syncErr);
     }
 
     return NextResponse.json({ address: shape(updated) });
@@ -55,7 +108,7 @@ export async function PATCH(
     console.error("[PATCH /api/account-api/addresses/:id]", err);
     return NextResponse.json(
       { error: "Failed to update address" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -63,13 +116,16 @@ export async function PATCH(
 // DELETE /api/account-api/addresses/[id]
 export async function DELETE(
   _request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await context.params;
 
     if (!id || id.length !== 24) {
-      return NextResponse.json({ error: "Invalid address id" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid address id" },
+        { status: 400 },
+      );
     }
 
     await connectToDatabase();
@@ -98,7 +154,7 @@ export async function DELETE(
     console.error("[DELETE /api/account-api/addresses/:id]", err);
     return NextResponse.json(
       { error: "Failed to delete address" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

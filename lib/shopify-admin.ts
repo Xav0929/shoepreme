@@ -1,6 +1,9 @@
 const SHOPIFY_ADMIN_URL = `https://${process.env.SHOPIFY_STORE_DOMAIN}/admin/api/2024-01/graphql.json`;
 
-export async function adminFetch(query: string, variables?: Record<string, unknown>) {
+export async function adminFetch(
+  query: string,
+  variables?: Record<string, unknown>,
+) {
   const res = await fetch(SHOPIFY_ADMIN_URL, {
     method: "POST",
     headers: {
@@ -258,7 +261,10 @@ export async function getOrders() {
     const data = await adminFetch(query, { cursor });
 
     if (data.errors) {
-      console.error("Shopify orders query error:", JSON.stringify(data.errors, null, 2));
+      console.error(
+        "Shopify orders query error:",
+        JSON.stringify(data.errors, null, 2),
+      );
       break;
     }
 
@@ -1411,8 +1417,7 @@ function getTrackingUrl(carrier: string, trackingNumber: string): string {
     return `https://www.lbcexpress.com/track/?tracking_no=${trackingNumber}`;
   if (c.includes("ninja"))
     return `https://track.ninjavan.co/ph/${trackingNumber}`;
-  if (c.includes("grab"))
-    return `https://tracking.grab.com/${trackingNumber}`;
+  if (c.includes("grab")) return `https://tracking.grab.com/${trackingNumber}`;
   if (c.includes("flash"))
     return `https://www.flashexpress.com.ph/tracking/?se=${trackingNumber}`;
   return `https://www.jtexpress.ph/trajectoryQuery?billCode=${trackingNumber}`;
@@ -1655,6 +1660,105 @@ export async function releaseFulfillmentHold(orderId: string) {
   );
 
   const errors = data?.data?.fulfillmentOrderReleaseHold?.userErrors;
+  if (errors?.length) return { success: false, error: errors[0].message };
+  return { success: true };
+}
+
+export async function createShopifyCustomerAddress(
+  customerId: string,
+  address: {
+    firstName: string;
+    lastName: string;
+    address1: string;
+    address2?: string;
+    city: string;
+    province: string;
+    zip: string;
+    country: string;
+    phone: string;
+  },
+) {
+  const gid = customerId.includes("gid://")
+    ? customerId
+    : `gid://shopify/Customer/${customerId}`;
+
+  const data = await adminFetch(
+    `
+    mutation customerAddressCreate($customerId: ID!, $address: MailingAddressInput!) {
+      customerAddressCreate(customerId: $customerId, address: $address) {
+        address { id }
+        userErrors { field message }
+      }
+    }
+  `,
+    { customerId: gid, address },
+  );
+
+  const errors = data?.data?.customerAddressCreate?.userErrors;
+  if (errors?.length) return { success: false, error: errors[0].message };
+  return {
+    success: true,
+    addressId: data?.data?.customerAddressCreate?.address?.id ?? null,
+  };
+}
+
+export async function updateShopifyCustomerAddress(
+  customerId: string,
+  shopifyAddressId: string,
+  address: {
+    firstName: string;
+    lastName: string;
+    address1: string;
+    address2?: string;
+    city: string;
+    province: string;
+    zip: string;
+    country: string;
+    phone: string;
+  },
+) {
+  const gid = customerId.includes("gid://")
+    ? customerId
+    : `gid://shopify/Customer/${customerId}`;
+
+  const data = await adminFetch(
+    `
+    mutation customerAddressUpdate($customerId: ID!, $addressId: ID!, $address: MailingAddressInput!) {
+      customerAddressUpdate(customerId: $customerId, addressId: $addressId, address: $address) {
+        address { id }
+        userErrors { field message }
+      }
+    }
+  `,
+    { customerId: gid, addressId: shopifyAddressId, address },
+  );
+
+  const errors = data?.data?.customerAddressUpdate?.userErrors;
+  if (errors?.length) return { success: false, error: errors[0].message };
+  return { success: true };
+}
+
+export async function setShopifyDefaultAddress(
+  customerId: string,
+  shopifyAddressId: string,
+) {
+  const gid = customerId.includes("gid://")
+    ? customerId
+    : `gid://shopify/Customer/${customerId}`;
+
+  const data = await adminFetch(
+    `
+    mutation customerDefaultAddressUpdate($customerId: ID!, $addressId: ID!) {
+      customerDefaultAddressUpdate(customerId: $customerId, addressId: $addressId) {
+        customer { id }
+        userErrors { field message }
+      }
+    }
+  `,
+    { customerId: gid, addressId: shopifyAddressId },
+  );
+
+  const errors = data?.data?.customerDefaultAddressUpdate?.userErrors;
   if (errors?.length) return { success: false, error: errors[0].message };
   return { success: true };
 }

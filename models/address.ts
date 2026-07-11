@@ -2,6 +2,7 @@ import mongoose, { Schema, type Document, type Model } from "mongoose";
 
 export interface AddressDocument extends Document {
   customerId: string; // shopifyCustomerId this address belongs to
+  shopifyAddressId?: string; // gid://shopify/MailingAddress/... mirrored copy
   firstName: string;
   lastName: string;
   address1: string;
@@ -19,6 +20,7 @@ export interface AddressDocument extends Document {
 const AddressSchema = new Schema<AddressDocument>(
   {
     customerId: { type: String, required: true, index: true },
+    shopifyAddressId: { type: String, default: null },
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
     address1: { type: String, required: true },
