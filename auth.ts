@@ -1,4 +1,5 @@
 import NextAuth from "next-auth";
+import { connectToDatabase } from "@/lib/mongodb";
 import { authConfig } from "./auth.config";
 import {
   customerAccountQuery,
@@ -152,10 +153,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
       }
 
+      try {
+        const { Customer } = await import("@/models/customer");
+        await connectToDatabase();
+        const customerId = (token.sub as string)?.split("/").pop();
+        const customer = await Customer.findOne({ shopifyCustomerId: customerId }).lean() as any;
+        token.disabled = customer?.disabled ?? false;
+      } catch {
+        // DB unreachable — don't block session
+      }
+
       return token;
     },
 
     async session({ session, token }) {
+      if (token.disabled) return null as any;
       session.shopifyAccessToken = token.shopifyAccessToken as
         | string
         | undefined;

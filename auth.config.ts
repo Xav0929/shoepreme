@@ -58,6 +58,22 @@ export const authConfig = {
           secure: true,
         },
       },
+      state: {
+        options: {
+          httpOnly: true,
+          sameSite: "none",
+          path: "/",
+          secure: true,
+        },
+      },
+      pkceCodeVerifier: {
+        options: {
+          httpOnly: true,
+          sameSite: "none",
+          path: "/",
+          secure: true,
+        },
+      },
     },
   }),
 } satisfies NextAuthConfig;

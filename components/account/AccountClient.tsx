@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+// signOut import removed — using redirect instead
 import { createPortal } from "react-dom";
 
 const SHOP_LOCATION = {
@@ -927,6 +928,7 @@ function CancelPreOrderButton({ draftId, draftName, onCancelled }: { draftId: st
   const [cancelling, setCancelling] = useState(false);
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
+
   async function handleCancel() {
     setCancelling(true);
     try {
@@ -1782,6 +1784,45 @@ export default function AccountClient({ customer, customerId, shopifyToken, init
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
+
+  // Poll session every 30s — force sign out if account was disabled
+  useEffect(() => {
+    async function checkSession() {
+      try {
+        const res = await fetch(`/api/account-api/check-status?customerId=${encodeURIComponent(customerId)}`);
+        const data = await res.json();
+        console.log("check-status poll:", data);
+        if (data.disabled) {
+          const params = new URLSearchParams({ error: "AccountDisabled" });
+          if (data.reason) params.set("reason", data.reason);
+          const callbackUrl = `/account/login?${params.toString()}`;
+          // Fetch CSRF token first
+          const csrfRes = await fetch("/api/auth/csrf");
+          const { csrfToken } = await csrfRes.json();
+          const form = document.createElement("form");
+          form.method = "POST";
+          form.action = "/api/auth/signout";
+          const cb = document.createElement("input");
+          cb.type = "hidden";
+          cb.name = "callbackUrl";
+          cb.value = callbackUrl;
+          const csrf = document.createElement("input");
+          csrf.type = "hidden";
+          csrf.name = "csrfToken";
+          csrf.value = csrfToken;
+          form.appendChild(cb);
+          form.appendChild(csrf);
+          document.body.appendChild(form);
+          form.submit();
+        }
+      } catch {
+        // network error — don't sign out
+      }
+    }
+    checkSession(); // run immediately on mount
+    const interval = setInterval(checkSession, 30000);
+    return () => clearInterval(interval);
+  }, [customerId]);
 
   useEffect(() => {
     let cancelled = false;
