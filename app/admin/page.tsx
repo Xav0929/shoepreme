@@ -94,17 +94,22 @@ export default function AdminOrdersPage() {
     } catch {}
   }, [localInProgress]);
 
-  const fetchOrders = useCallback(async () => {
-    setLoading(true);
-    const res = await fetch("/api/admin/orders");
-    const data = await res.json();
-    setOrders(data);
-    setLoading(false);
-  }, []);
+const fetchOrders = useCallback(async (showSpinner = false) => {
+  if (showSpinner) setLoading(true);
+  const res = await fetch("/api/admin/orders");
+  const data = await res.json();
+  setOrders(data);
+  setLoading(false);
+}, []);
+
 
   useEffect(() => {
-    fetchOrders();
+    fetchOrders(true);
+    const interval = setInterval(() => fetchOrders(), 5000);
+    return () => clearInterval(interval);
   }, [fetchOrders]);
+
+  
 
   async function handleFulfill(e: React.MouseEvent, orderId: string) {
     e.stopPropagation();
@@ -491,10 +496,11 @@ export default function AdminOrdersPage() {
               Orders
             </h1>
           </div>
-          <ActionButton onClick={fetchOrders} variant="ghost">
+          <ActionButton onClick={() => fetchOrders(true)} variant="ghost">
             ↻ Refresh
           </ActionButton>
         </div>
+        
 
         {/* Stat Cards */}
         <div

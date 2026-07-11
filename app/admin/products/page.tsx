@@ -2146,9 +2146,9 @@ export default function AdminProductsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
 
-  const fetchProducts = useCallback(async (delay?: number) => {
+  const fetchProducts = useCallback(async (delay?: number, showSpinner = false) => {
     if (delay) await new Promise((r) => setTimeout(r, delay));
-    setLoading(true);
+    if (showSpinner) setLoading(true);
     const res = await fetch("/api/admin/products", { cache: "no-store" });
     const data = await res.json();
     setProducts(data);
@@ -2225,7 +2225,9 @@ export default function AdminProductsPage() {
   }
 
   useEffect(() => {
-    fetchProducts();
+    fetchProducts(undefined, true);
+    const interval = setInterval(() => fetchProducts(), 10000);
+    return () => clearInterval(interval);
   }, [fetchProducts]);
 
   const outOfStock = products.filter((p) => p.totalInventory === 0);
@@ -2294,7 +2296,7 @@ export default function AdminProductsPage() {
               width: isMobile ? "100%" : "auto",
             }}
           >
-            <ActionButton onClick={() => fetchProducts()} variant="ghost">
+            <ActionButton onClick={() => fetchProducts(undefined, true)} variant="ghost">
               ↻ Refresh
             </ActionButton>
             <ActionButton
@@ -2627,7 +2629,7 @@ export default function AdminProductsPage() {
           onSaved={(newProductId?: string) =>
             newProductId
               ? fetchProductsUntilPresent(newProductId)
-              : fetchProducts()
+              : fetchProducts(undefined, false)
           }
           onSizeAdded={refreshModalProduct}
           showToast={showToast}

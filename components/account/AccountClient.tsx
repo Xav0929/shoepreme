@@ -1785,16 +1785,30 @@ export default function AccountClient({ customer, customerId, shopifyToken, init
 
   useEffect(() => {
     let cancelled = false;
-    async function load() {
-      setOrdersLoading(true);
+    async function load(showSpinner = false) {
+      if (showSpinner) setOrdersLoading(true);
       try {
         const res = await fetch(`/api/account-api/orders?customerAccessToken=${encodeURIComponent(shopifyToken ?? "")}`);
         const data = await res.json();
         if (!cancelled) setOrders(data.orders ?? []);
       } catch (err) { console.error("Failed to load orders", err); } finally { if (!cancelled) setOrdersLoading(false); }
     }
-    load();
-    return () => { cancelled = true; };
+    load(true);
+    const interval = setInterval(() => load(), 10000); // silent refresh every 10s
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [customerId, shopifyToken]);useEffect(() => {
+    let cancelled = false;
+    async function load(showSpinner = false) {
+      if (showSpinner) setOrdersLoading(true);
+      try {
+        const res = await fetch(`/api/account-api/orders?customerAccessToken=${encodeURIComponent(shopifyToken ?? "")}`);
+        const data = await res.json();
+        if (!cancelled) setOrders(data.orders ?? []);
+      } catch (err) { console.error("Failed to load orders", err); } finally { if (!cancelled) setOrdersLoading(false); }
+    }
+    load(true);
+    const interval = setInterval(() => load(), 10000); // silent refresh every 10s
+    return () => { cancelled = true; clearInterval(interval); };
   }, [customerId, shopifyToken]);
 
   const sectionTitles: Record<Section, string> = {
