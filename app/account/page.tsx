@@ -178,6 +178,7 @@ export default async function AccountPage() {
     email: customer?.email ?? session.user.email ?? undefined,
     phone: (dbCustomer as any)?.phone ?? customer?.phone ?? undefined,
     numberOfOrders: initialOrders.length,
+    image: session.user.image ?? undefined,
   };
 
   return (

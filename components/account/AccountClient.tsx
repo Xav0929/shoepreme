@@ -24,6 +24,50 @@ interface CustomerData {
   email?: string;
   phone?: string;
   numberOfOrders?: number;
+  image?: string;
+}
+
+function UserAvatar({
+  name,
+  image,
+  size = 44,
+  borderSize = 2,
+}: {
+  name: string;
+  image?: string;
+  size?: number;
+  borderSize?: number;
+}) {
+  const seed = encodeURIComponent(name || "crew");
+  const avatarUrl = `https://api.dicebear.com/9.x/pixel-art/svg?seed=${seed}&backgroundColor=1a2332,141c28,0d1117&beardProbability=0&clothingColor=e8a830,4a7fa5,f87171,4ade80,a78bfa`;
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        border: `${borderSize}px solid rgba(232,168,48,0.3)`,
+        flexShrink: 0,
+        overflow: "hidden",
+        position: "relative",
+        background: "rgba(232,168,48,0.1)",
+      }}
+    >
+      {image ? (
+        <img
+          src={image}
+          alt={name}
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        />
+      ) : (
+        <img
+          src={avatarUrl}
+          alt={name}
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        />
+      )}
+    </div>
+  );
 }
 
 interface AccountClientProps {
@@ -4380,29 +4424,12 @@ function ProfileSection({
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-        <div
-          style={{
-            width: "64px",
-            height: "64px",
-            borderRadius: "50%",
-            background: "rgba(232,168,48,0.1)",
-            border: "2px solid rgba(232,168,48,0.25)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}
-        >
-          <span
-            style={{
-              fontFamily: "Bebas Neue, sans-serif",
-              fontSize: "1.6rem",
-              color: "#e8a830",
-            }}
-          >
-            {form.displayName.charAt(0).toUpperCase()}
-          </span>
-        </div>
+        <UserAvatar
+          name={form.displayName}
+          image={customer.image}
+          size={64}
+          borderSize={2}
+        />
         <div>
           <p
             style={{
@@ -7116,29 +7143,12 @@ export default function AccountClient({
             padding: "20px 20px 16px",
           }}
         >
-          <div
-            style={{
-              width: "52px",
-              height: "52px",
-              borderRadius: "50%",
-              background: "rgba(232,168,48,0.1)",
-              border: "2px solid rgba(232,168,48,0.3)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            <span
-              style={{
-                fontFamily: "Bebas Neue, sans-serif",
-                fontSize: "1.4rem",
-                color: "#e8a830",
-              }}
-            >
-              {liveCustomer.displayName.charAt(0).toUpperCase()}
-            </span>
-          </div>
+          <UserAvatar
+            name={liveCustomer.displayName}
+            image={liveCustomer.image}
+            size={52}
+            borderSize={2}
+          />
           <div style={{ flex: 1, minWidth: 0 }}>
             <p
               style={{
@@ -7252,29 +7262,12 @@ export default function AccountClient({
                 marginBottom: "16px",
               }}
             >
-              <div
-                style={{
-                  width: "44px",
-                  height: "44px",
-                  borderRadius: "50%",
-                  background: "rgba(232,168,48,0.1)",
-                  border: "2px solid rgba(232,168,48,0.25)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: "12px",
-                }}
-              >
-                <span
-                  style={{
-                    fontFamily: "Bebas Neue, sans-serif",
-                    fontSize: "1.2rem",
-                    color: "#e8a830",
-                  }}
-                >
-                  {liveCustomer.displayName.charAt(0).toUpperCase()}
-                </span>
-              </div>
+              <UserAvatar
+                name={liveCustomer.displayName}
+                image={liveCustomer.image}
+                size={44}
+                borderSize={2}
+              />
               <p
                 style={{
                   fontFamily: "Bebas Neue, sans-serif",
