@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+// signOut import removed — using redirect instead
 import { createPortal } from "react-dom";
 
 const SHOP_LOCATION = {

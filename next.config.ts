@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["ransack-patience-crepe.ngrok-free.dev"],
+  allowedDevOrigins: ["limb-overreach-catalyze.ngrok-free.dev"],
   images: {
     remotePatterns: [
       {

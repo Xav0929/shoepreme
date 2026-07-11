@@ -67,6 +67,8 @@ export default function AdminOrdersPage() {
   );
   const { toast, showToast } = useToast();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 25;
   const [trackingOrder, setTrackingOrder] = useState<any | null>(null);
   const [trackingCarrier, setTrackingCarrier] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
@@ -428,7 +430,7 @@ const fetchOrders = useCallback(async (showSpinner = false) => {
     .filter((o) => o.displayFinancialStatus === "PAID")
     .reduce((s, o) => s + parseFloat(o.totalPriceSet.shopMoney.amount), 0);
 
-  const filtered = useMemo(() => {
+  const filteredAll = useMemo(() => {
     let list = orders;
     if (filter === "UNFULFILLED")
       list = list.filter(
@@ -455,6 +457,12 @@ const fetchOrders = useCallback(async (showSpinner = false) => {
     }
     return list;
   }, [orders, filter, search]);
+
+  // Reset to page 1 when filter/search changes
+  useEffect(() => { setCurrentPage(1); }, [filter, search]);
+
+  const totalPages = Math.ceil(filteredAll.length / PAGE_SIZE);
+  const filtered = filteredAll.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
     <div style={{ padding: isMobile ? "20px 16px 40px" : "32px 36px 60px" }}>
@@ -1633,6 +1641,38 @@ const fetchOrders = useCallback(async (showSpinner = false) => {
           </div>
         </div>
       </div>
+      {/* Paginator */}
+      {totalPages > 1 && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 24 }}>
+          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
+            style={{ padding: "6px 14px", borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: currentPage === 1 ? "rgba(240,244,248,0.2)" : "rgba(240,244,248,0.6)", fontFamily: "monospace", fontSize: 10, fontWeight: 700, cursor: currentPage === 1 ? "not-allowed" : "pointer", letterSpacing: "0.1em" }}>
+            ← Prev
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1)
+            .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2)
+            .reduce<(number | "...")[]>((acc, p, i, arr) => {
+              if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push("...");
+              acc.push(p);
+              return acc;
+            }, [])
+            .map((p, i) => p === "..." ? (
+              <span key={`ellipsis-${i}`} style={{ color: "rgba(240,244,248,0.25)", fontFamily: "monospace", fontSize: 10 }}>…</span>
+            ) : (
+              <button key={p} onClick={() => setCurrentPage(p as number)}
+                style={{ width: 32, height: 32, borderRadius: 8, background: currentPage === p ? "#e8a830" : "rgba(255,255,255,0.04)", border: currentPage === p ? "none" : "1px solid rgba(255,255,255,0.08)", color: currentPage === p ? "#0d1117" : "rgba(240,244,248,0.5)", fontFamily: "monospace", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
+                {p}
+              </button>
+            ))}
+          <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}
+            style={{ padding: "6px 14px", borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: currentPage === totalPages ? "rgba(240,244,248,0.2)" : "rgba(240,244,248,0.6)", fontFamily: "monospace", fontSize: 10, fontWeight: 700, cursor: currentPage === totalPages ? "not-allowed" : "pointer", letterSpacing: "0.1em" }}>
+            Next →
+          </button>
+          <span style={{ fontFamily: "monospace", fontSize: 9, color: "rgba(240,244,248,0.25)", marginLeft: 8 }}>
+            {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredAll.length)} of {filteredAll.length}
+          </span>
+        </div>
+      )}
+
       <Toast toast={toast} />
 
       {/* ── Mark as Paid Modal ── */}
