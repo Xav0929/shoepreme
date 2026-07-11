@@ -3180,6 +3180,39 @@ function AddressesSection({ customerId }: { customerId: string }) {
     setMounted(true);
   }, []);
 
+  // Poll every 30s — auto sign out if account was disabled
+  useEffect(() => {
+    async function checkSession() {
+      try {
+        const res = await fetch(`/api/account-api/check-status?customerId=${encodeURIComponent(customerId)}`);
+        const data = await res.json();
+        if (data.disabled) {
+          const params = new URLSearchParams({ error: "AccountDisabled" });
+          if (data.reason) params.set("reason", data.reason);
+          const callbackUrl = `/account/login?${params.toString()}`;
+          const csrfRes = await fetch("/api/auth/csrf");
+          const { csrfToken } = await csrfRes.json();
+          const form = document.createElement("form");
+          form.method = "POST";
+          form.action = "/api/auth/signout";
+          const cb = document.createElement("input");
+          cb.type = "hidden"; cb.name = "callbackUrl"; cb.value = callbackUrl;
+          const csrf = document.createElement("input");
+          csrf.type = "hidden"; csrf.name = "csrfToken"; csrf.value = csrfToken;
+          form.appendChild(cb);
+          form.appendChild(csrf);
+          document.body.appendChild(form);
+          form.submit();
+        }
+      } catch {
+        // network error — don't sign out
+      }
+    }
+    checkSession();
+    const interval = setInterval(checkSession, 30000);
+    return () => clearInterval(interval);
+  }, [customerId]);
+
   useEffect(() => {
     if (addressCache.has(customerId)) return;
     let cancelled = false;
@@ -3727,10 +3760,12 @@ function CancelPreOrderButton({
   draftId,
   draftName,
   onCancelled,
+  customerId,
 }: {
   draftId: string;
   draftName: string;
   onCancelled: () => void;
+  customerId: string;
 }) {
   const [open, setOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -3738,6 +3773,39 @@ function CancelPreOrderButton({
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Poll every 30s — auto sign out if account was disabled
+  useEffect(() => {
+    async function checkSession() {
+      try {
+        const res = await fetch(`/api/account-api/check-status?customerId=${encodeURIComponent(customerId)}`);
+        const data = await res.json();
+        if (data.disabled) {
+          const params = new URLSearchParams({ error: "AccountDisabled" });
+          if (data.reason) params.set("reason", data.reason);
+          const callbackUrl = `/account/login?${params.toString()}`;
+          const csrfRes = await fetch("/api/auth/csrf");
+          const { csrfToken } = await csrfRes.json();
+          const form = document.createElement("form");
+          form.method = "POST";
+          form.action = "/api/auth/signout";
+          const cb = document.createElement("input");
+          cb.type = "hidden"; cb.name = "callbackUrl"; cb.value = callbackUrl;
+          const csrf = document.createElement("input");
+          csrf.type = "hidden"; csrf.name = "csrfToken"; csrf.value = csrfToken;
+          form.appendChild(cb);
+          form.appendChild(csrf);
+          document.body.appendChild(form);
+          form.submit();
+        }
+      } catch {
+        // network error — don't sign out
+      }
+    }
+    checkSession();
+    const interval = setInterval(checkSession, 30000);
+    return () => clearInterval(interval);
+  }, [customerId]);
   async function handleCancel() {
     setCancelling(true);
     try {
@@ -3920,7 +3988,7 @@ function CancelPreOrderButton({
   );
 }
 
-function PreOrdersSection({ email }: { email?: string }) {
+function PreOrdersSection({ email, customerId }: { email?: string; customerId: string }) {
   const [drafts, setDrafts] = useState<DraftOrder[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -4326,6 +4394,7 @@ function PreOrdersSection({ email }: { email?: string }) {
               <CancelPreOrderButton
                 draftId={draft.id}
                 draftName={draft.name}
+                customerId={customerId}
                 onCancelled={() =>
                   setDrafts((prev) => prev.filter((d) => d.id !== draft.id))
                 }
@@ -7046,6 +7115,39 @@ export default function AccountClient({
     setMounted(true);
   }, []);
 
+  // Poll every 30s — auto sign out if account was disabled
+  useEffect(() => {
+    async function checkSession() {
+      try {
+        const res = await fetch(`/api/account-api/check-status?customerId=${encodeURIComponent(customerId)}`);
+        const data = await res.json();
+        if (data.disabled) {
+          const params = new URLSearchParams({ error: "AccountDisabled" });
+          if (data.reason) params.set("reason", data.reason);
+          const callbackUrl = `/account/login?${params.toString()}`;
+          const csrfRes = await fetch("/api/auth/csrf");
+          const { csrfToken } = await csrfRes.json();
+          const form = document.createElement("form");
+          form.method = "POST";
+          form.action = "/api/auth/signout";
+          const cb = document.createElement("input");
+          cb.type = "hidden"; cb.name = "callbackUrl"; cb.value = callbackUrl;
+          const csrf = document.createElement("input");
+          csrf.type = "hidden"; csrf.name = "csrfToken"; csrf.value = csrfToken;
+          form.appendChild(cb);
+          form.appendChild(csrf);
+          document.body.appendChild(form);
+          form.submit();
+        }
+      } catch {
+        // network error — don't sign out
+      }
+    }
+    checkSession();
+    const interval = setInterval(checkSession, 30000);
+    return () => clearInterval(interval);
+  }, [customerId]);
+
   useEffect(() => {
     let cancelled = false;
     async function load(showSpinner = false) {
@@ -7524,7 +7626,7 @@ export default function AccountClient({
               <AddressesSection customerId={customerId} />
             )}
             {activeSection === "pre-orders" && (
-              <PreOrdersSection email={liveCustomer.email} />
+              <PreOrdersSection email={liveCustomer.email} customerId={customerId} />
             )}
             {activeSection === "the-crew" && (
               <TheCrewSection

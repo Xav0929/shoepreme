@@ -53,7 +53,9 @@ interface Customer {
   disabled: boolean;
   displayName?: string;
   appeal?: {
+    reason?: string;
     message: string;
+    contactPreference?: string;
     submittedAt: string;
     status: "pending" | "resolved";
   };
@@ -649,21 +651,40 @@ function CustomerDetailDrawer({
             >
               {formatDate(customer.appeal.submittedAt)}
             </h3>
-            <p
-              style={{
-                fontFamily: "Poppins, sans-serif",
-                fontSize: 12,
-                color: "rgba(240,244,248,0.7)",
-                lineHeight: 1.7,
-                background: "rgba(255,255,255,0.025)",
-                border: "1px solid rgba(255,255,255,0.06)",
-                borderRadius: 10,
-                padding: "14px 16px",
-                margin: "16px 0 24px",
-              }}
-            >
-              {customer.appeal.message}
-            </p>
+            {/* Credit summary */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, margin: "12px 0" }}>
+              {[
+                { label: "Orders", value: String(customer.numberOfOrders) },
+                { label: "Total Spent", value: formatPrice(customer.amountSpent.amount, customer.amountSpent.currencyCode) },
+                { label: "Member Since", value: new Date(customer.createdAt).getFullYear().toString() },
+              ].map((s) => (
+                <div key={s.label} style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 8, padding: "10px 12px", textAlign: "center" }}>
+                  <p style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: "1.1rem", color: "#e8a830", margin: "0 0 2px" }}>{s.value}</p>
+                  <p style={{ fontFamily: "monospace", fontSize: 8, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(240,244,248,0.25)", margin: 0 }}>{s.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {customer.appeal.reason && (
+              <div style={{ background: "rgba(232,168,48,0.04)", border: "1px solid rgba(232,168,48,0.15)", borderRadius: 8, padding: "10px 14px", marginBottom: 8 }}>
+                <p style={{ fontFamily: "monospace", fontSize: 8, fontWeight: 800, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(232,168,48,0.5)", margin: "0 0 4px" }}>Reason</p>
+                <p style={{ fontFamily: "monospace", fontSize: 11, color: "#e8a830", margin: 0 }}>{(customer.appeal as any).reason}</p>
+              </div>
+            )}
+
+            <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: "14px 16px", margin: "0 0 8px" }}>
+              <p style={{ fontFamily: "monospace", fontSize: 8, fontWeight: 800, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(240,244,248,0.3)", margin: "0 0 6px" }}>Explanation</p>
+              <p style={{ fontFamily: "Poppins, sans-serif", fontSize: 12, color: "rgba(240,244,248,0.7)", lineHeight: 1.7, margin: 0 }}>
+                {customer.appeal.message}
+              </p>
+            </div>
+
+            {(customer.appeal as any).contactPreference && (
+              <div style={{ background: "rgba(74,127,165,0.05)", border: "1px solid rgba(74,127,165,0.15)", borderRadius: 8, padding: "10px 14px", marginBottom: 8 }}>
+                <p style={{ fontFamily: "monospace", fontSize: 8, fontWeight: 800, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(74,127,165,0.5)", margin: "0 0 4px" }}>Preferred Contact</p>
+                <p style={{ fontFamily: "monospace", fontSize: 11, color: "#4a7fa5", margin: 0 }}>{(customer.appeal as any).contactPreference}</p>
+              </div>
+            )}
             <div style={{ display: "flex", gap: 10 }}>
               <button
                 onClick={() => handleResolveAppeal("dismiss")}

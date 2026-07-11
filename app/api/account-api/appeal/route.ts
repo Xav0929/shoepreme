@@ -5,9 +5,9 @@ import { getCustomerIdByEmail } from "@/lib/shopify-admin";
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, message } = await req.json();
-    if (!email || !message?.trim()) {
-      return NextResponse.json({ error: "Email and message are required" }, { status: 400 });
+    const { email, message, reason, contactPreference } = await req.json();
+    if (!email || !message?.trim() || !reason) {
+      return NextResponse.json({ error: "Email, reason and message are required" }, { status: 400 });
     }
 
     await connectToDatabase();
@@ -23,11 +23,13 @@ export async function POST(req: NextRequest) {
     await Customer.findOneAndUpdate(
       { shopifyCustomerId: normalizedId },
       {
-        shopifyCustomerId: normalizedId,
-        appeal: {
-          message: message.trim(),
-          submittedAt: new Date(),
-          status: "pending",
+        $set: {
+          shopifyCustomerId: normalizedId,
+          "appeal.reason": reason,
+          "appeal.message": message.trim(),
+          "appeal.contactPreference": contactPreference?.trim() || null,
+          "appeal.submittedAt": new Date(),
+          "appeal.status": "pending",
         },
       },
       { upsert: true, new: true },

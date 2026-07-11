@@ -7,23 +7,47 @@ import { useEffect } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 
+const APPEAL_REASONS = [
+  "This was a mistake — I didn't violate any rules",
+  "My account was used by someone else",
+  "I want to dispute the reason given",
+  "I've resolved the issue and want to continue",
+  "Other",
+];
+
 function AppealModal({
   onClose,
   initialEmail = "",
+  disableReason = "",
 }: {
   onClose: () => void;
   initialEmail?: string;
+  disableReason?: string;
 }) {
   const router = useRouter();
   const [email, setEmail] = useState(initialEmail);
+  const [reason, setReason] = useState("");
   const [message, setMessage] = useState("");
+  const [contactPreference, setContactPreference] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const inputStyle: React.CSSProperties = {
+    width: "100%", background: "rgba(255,255,255,0.04)",
+    border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8,
+    padding: "10px 12px", color: "#f5f7f9", fontFamily: "monospace",
+    fontSize: 11, outline: "none", boxSizing: "border-box",
+  };
+  const labelStyle: React.CSSProperties = {
+    fontFamily: "monospace", fontSize: 8, fontWeight: 800,
+    letterSpacing: "0.2em", textTransform: "uppercase",
+    color: "rgba(245,247,249,0.3)", display: "block", marginBottom: 6,
+  };
+
   async function handleSubmit() {
-    if (!email.trim() || !message.trim()) {
-      setError("Please fill in both fields.");
+    if (!email.trim() || !reason || !message.trim()) {
+      setError("Please fill in all required fields.");
       return;
     }
     setSubmitting(true);
@@ -32,14 +56,16 @@ function AppealModal({
       const res = await fetch("/api/account-api/appeal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), message: message.trim() }),
+        body: JSON.stringify({
+          email: email.trim(),
+          reason,
+          message: message.trim(),
+          contactPreference: contactPreference.trim(),
+        }),
       });
       const data = await res.json();
-      if (data.success) {
-        setSubmitted(true);
-      } else {
-        setError(data.error || "Failed to submit appeal.");
-      }
+      if (data.success) setSubmitted(true);
+      else setError(data.error || "Failed to submit appeal.");
     } catch {
       setError("Failed to submit appeal.");
     } finally {
@@ -48,191 +74,86 @@ function AppealModal({
   }
 
   return (
-    <div
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 1000,
-        background: "rgba(0,0,0,0.75)",
-        backdropFilter: "blur(6px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 20,
-      }}
-    >
-      <div
-        style={{
-          background: "#0d1117",
-          border: "1px solid rgba(255,255,255,0.08)",
-          borderRadius: 16,
-          padding: 28,
-          width: "min(420px, 100%)",
-        }}
-      >
+    <div onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, overflowY: "auto" }}>
+      <div style={{ background: "#0d1117", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: 28, width: "min(460px, 100%)", margin: "auto", display: "flex", flexDirection: "column", gap: 16 }}>
         {submitted ? (
           <>
-            <h3
-              style={{
-                fontFamily: "Bebas Neue, sans-serif",
-                fontSize: "1.4rem",
-                color: "#4ade80",
-                margin: "0 0 10px",
-              }}
-            >
-              Appeal Submitted
-            </h3>
-            <p
-              style={{
-                fontFamily: "monospace",
-                fontSize: 10,
-                color: "rgba(245,247,249,0.5)",
-                lineHeight: 1.7,
-                margin: "0 0 20px",
-              }}
-            >
-              We've received your appeal and will review it shortly.
-            </p>
-            <button
-              onClick={() => router.push("/")}
-              style={{
-                width: "100%",
-                padding: 12,
-                background: "#e8a830",
-                border: "none",
-                borderRadius: 8,
-                color: "#0d1117",
-                fontFamily: "monospace",
-                fontSize: 10,
-                fontWeight: 700,
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-                cursor: "pointer",
-              }}
-            >
+            <div style={{ textAlign: "center", padding: "12px 0" }}>
+              <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.25)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+              </div>
+              <h3 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: "1.4rem", color: "#4ade80", margin: "0 0 8px" }}>Appeal Submitted</h3>
+              <p style={{ fontFamily: "monospace", fontSize: 10, color: "rgba(245,247,249,0.5)", lineHeight: 1.7, margin: "0 0 20px" }}>
+                We've received your appeal and will review it within 1–3 business days. We'll reach out via your preferred contact method.
+              </p>
+            </div>
+            <button onClick={() => router.push("/")} style={{ width: "100%", padding: 12, background: "#e8a830", border: "none", borderRadius: 8, color: "#0d1117", fontFamily: "monospace", fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", cursor: "pointer" }}>
               Return to Home
             </button>
           </>
         ) : (
           <>
-            <h3
-              style={{
-                fontFamily: "Bebas Neue, sans-serif",
-                fontSize: "1.4rem",
-                color: "#f5f7f9",
-                margin: "0 0 6px",
-              }}
-            >
-              Appeal Disabled Account
-            </h3>
-            <p
-              style={{
-                fontFamily: "monospace",
-                fontSize: 10,
-                color: "rgba(245,247,249,0.4)",
-                lineHeight: 1.6,
-                margin: "0 0 18px",
-              }}
-            >
-              Tell us why you believe this was a mistake.
-            </p>
-            {error && (
-              <p
-                style={{
-                  fontFamily: "monospace",
-                  fontSize: 10,
-                  color: "#f87171",
-                  margin: "0 0 12px",
-                }}
-              >
-                {error}
+            <div>
+              <p style={{ fontFamily: "monospace", fontSize: 8, fontWeight: 800, letterSpacing: "0.22em", textTransform: "uppercase", color: "rgba(248,113,113,0.6)", margin: "0 0 4px" }}>Account Appeal</p>
+              <h3 style={{ fontFamily: "Bebas Neue, sans-serif", fontSize: "1.5rem", color: "#f5f7f9", margin: "0 0 4px" }}>Appeal Disabled Account</h3>
+              <p style={{ fontFamily: "monospace", fontSize: 10, color: "rgba(245,247,249,0.35)", lineHeight: 1.6, margin: 0 }}>
+                Fill out this form completely. The more detail you provide, the faster we can review your case.
               </p>
+            </div>
+
+            {disableReason && (
+              <div style={{ background: "rgba(248,113,113,0.05)", border: "1px solid rgba(248,113,113,0.15)", borderRadius: 8, padding: "10px 14px" }}>
+                <p style={{ fontFamily: "monospace", fontSize: 8, fontWeight: 800, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(248,113,113,0.5)", margin: "0 0 4px" }}>Reason for Disable</p>
+                <p style={{ fontFamily: "monospace", fontSize: 11, color: "rgba(248,113,113,0.8)", margin: 0 }}>{decodeURIComponent(disableReason)}</p>
+              </div>
             )}
-            <input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Your account email"
-              readOnly={!!initialEmail}
-              style={{
-                width: "100%",
-                background: initialEmail
-                  ? "rgba(255,255,255,0.02)"
-                  : "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                borderRadius: 8,
-                padding: "10px 12px",
-                color: initialEmail ? "rgba(245,247,249,0.5)" : "#f5f7f9",
-                fontFamily: "monospace",
-                fontSize: 11,
-                outline: "none",
-                marginBottom: 10,
-                boxSizing: "border-box",
-                cursor: initialEmail ? "not-allowed" : "text",
-              }}
-            />
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Explain your situation..."
-              rows={4}
-              style={{
-                width: "100%",
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                borderRadius: 8,
-                padding: "10px 12px",
-                color: "#f5f7f9",
-                fontFamily: "monospace",
-                fontSize: 11,
-                outline: "none",
-                marginBottom: 16,
-                resize: "vertical",
-                boxSizing: "border-box",
-              }}
-            />
+
+            {error && <p style={{ fontFamily: "monospace", fontSize: 10, color: "#f87171", margin: 0 }}>{error}</p>}
+
+            <div>
+              <label style={labelStyle}>Account Email *</label>
+              <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="your@email.com" readOnly={!!initialEmail}
+                style={{ ...inputStyle, color: initialEmail ? "rgba(245,247,249,0.5)" : "#f5f7f9", cursor: initialEmail ? "not-allowed" : "text", background: initialEmail ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.04)" }} />
+            </div>
+
+            <div>
+              <label style={labelStyle}>Reason for Appeal *</label>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {APPEAL_REASONS.map((r) => (
+                  <button key={r} onClick={() => setReason(r)}
+                    style={{ padding: "9px 12px", background: reason === r ? "rgba(232,168,48,0.08)" : "rgba(255,255,255,0.02)", border: `1px solid ${reason === r ? "rgba(232,168,48,0.35)" : "rgba(255,255,255,0.07)"}`, borderRadius: 8, color: reason === r ? "#e8a830" : "rgba(245,247,249,0.45)", fontFamily: "monospace", fontSize: 10, letterSpacing: "0.04em", textAlign: "left", cursor: "pointer", transition: "all 0.12s" }}>
+                    {r}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label style={labelStyle}>Detailed Explanation *</label>
+              <textarea value={message} onChange={(e) => setMessage(e.target.value)}
+                placeholder="Describe your situation in detail. Include any relevant order numbers, dates, or context that supports your case."
+                rows={5}
+                style={{ ...inputStyle, resize: "vertical" }} />
+            </div>
+
+            <div>
+              <label style={labelStyle}>Preferred Contact (optional)</label>
+              <input value={contactPreference} onChange={(e) => setContactPreference(e.target.value)}
+                placeholder="e.g. Facebook: /yourname, GCash: 09XX, or leave email"
+                style={inputStyle} />
+              <p style={{ fontFamily: "monospace", fontSize: 9, color: "rgba(245,247,249,0.25)", margin: "6px 0 0", letterSpacing: "0.03em" }}>
+                How should we reach you with our decision?
+              </p>
+            </div>
+
             <div style={{ display: "flex", gap: 10 }}>
-              <button
-                onClick={onClose}
-                disabled={submitting}
-                style={{
-                  flex: 1,
-                  padding: 12,
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  borderRadius: 8,
-                  color: "rgba(245,247,249,0.4)",
-                  fontFamily: "monospace",
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  cursor: "pointer",
-                }}
-              >
+              <button onClick={onClose} disabled={submitting}
+                style={{ flex: 1, padding: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, color: "rgba(245,247,249,0.4)", fontFamily: "monospace", fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer" }}>
                 Cancel
               </button>
-              <button
-                onClick={handleSubmit}
-                disabled={submitting}
-                style={{
-                  flex: 2,
-                  padding: 12,
-                  background: "#e8a830",
-                  border: "none",
-                  borderRadius: 8,
-                  color: "#0d1117",
-                  fontFamily: "monospace",
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: "0.14em",
-                  textTransform: "uppercase",
-                  cursor: submitting ? "not-allowed" : "pointer",
-                  opacity: submitting ? 0.6 : 1,
-                }}
-              >
+              <button onClick={handleSubmit} disabled={submitting || !reason || !message.trim()}
+                style={{ flex: 2, padding: 12, background: "#e8a830", border: "none", borderRadius: 8, color: "#0d1117", fontFamily: "monospace", fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", cursor: submitting ? "not-allowed" : "pointer", opacity: submitting || !reason || !message.trim() ? 0.5 : 1 }}>
                 {submitting ? "Submitting…" : "Submit Appeal"}
               </button>
             </div>
@@ -371,6 +292,7 @@ function LoginForm() {
         <AppealModal
           onClose={() => setShowAppeal(false)}
           initialEmail={prefillEmail}
+          disableReason={disableReason ?? ""}
         />
       )}
 

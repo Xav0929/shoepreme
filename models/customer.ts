@@ -1,7 +1,7 @@
 import mongoose, { Schema, type Document, type Model } from "mongoose";
 
 export interface CustomerDocument extends Document {
-  shopifyCustomerId: string; // ties this record back to the Shopify customer
+  shopifyCustomerId: string;
   displayName: string;
   email?: string;
   phone?: string;
@@ -9,7 +9,9 @@ export interface CustomerDocument extends Document {
   disabled: boolean;
   disableReason?: string;
   appeal?: {
+    reason: string;
     message: string;
+    contactPreference?: string;
     submittedAt: Date;
     status: "pending" | "resolved";
   };
@@ -27,7 +29,9 @@ const CustomerSchema = new Schema<CustomerDocument>(
     disabled: { type: Boolean, default: false },
     disableReason: { type: String },
     appeal: {
+      reason: { type: String },
       message: { type: String },
+      contactPreference: { type: String },
       submittedAt: { type: Date },
       status: { type: String, enum: ["pending", "resolved"], default: "pending" },
     },
