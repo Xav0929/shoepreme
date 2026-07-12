@@ -140,6 +140,7 @@ function BentoAdminTile({
           <div
             style={{
               position: "absolute", top: 10, left: 10,
+              zIndex: 10,
               fontFamily: "monospace", fontSize: 7,
               fontWeight: 800, letterSpacing: "0.18em",
               textTransform: "uppercase", color: "#e8a830",

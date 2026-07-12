@@ -236,6 +236,7 @@ function BentoTile({
         <div
           style={{
             position: "absolute",
+            zIndex: 10,
             top: 14,
             left: 14,
             fontFamily: "monospace",
@@ -650,8 +651,8 @@ export default function TheCrewPage() {
             return {
               ...tile,
               src:     match.src     ?? tile.src,
-              label:   match.label   || tile.label,
-              caption: match.caption || tile.caption,
+              label:   match.label   ?? tile.label,
+              caption: match.caption ?? tile.caption,
             };
           })
         );
