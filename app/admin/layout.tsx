@@ -246,12 +246,52 @@ export default function AdminLayout({
   const [demoChecked, setDemoChecked] = useState(false);
   useEffect(() => {
     const match = document.cookie.match(/demo-admin-session=([^;]+)/);
-    if (match) {
-      try {
-        setDemoSession(JSON.parse(decodeURIComponent(match[1])));
-      } catch {}
+    const tokenMatch = document.cookie.match(/admin-session-token=([^;]+)/);
+
+    if (!match || !tokenMatch) {
+      setDemoChecked(true);
+      return;
     }
-    setDemoChecked(true);
+
+    const sessionToken = tokenMatch[1];
+
+    async function validateSession() {
+      try {
+        const r = await fetch("/api/admin/auth/validate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionToken }),
+        });
+        const data = await r.json();
+        if (!data.valid) {
+          document.cookie = "demo-admin-session=; path=/; max-age=0";
+          document.cookie = "admin-session-token=; path=/; max-age=0";
+          window.location.href = "/admin/login";
+          return false;
+        }
+        return true;
+      } catch {
+        return true; // DB unreachable — allow through
+      }
+    }
+
+    // Initial check
+    validateSession().then((valid) => {
+      if (valid) {
+        try {
+          setDemoSession(JSON.parse(decodeURIComponent(match[1])));
+        } catch {}
+      }
+      setDemoChecked(true);
+    });
+
+    // Poll every 10 seconds
+    const interval = setInterval(async () => {
+      const stillValid = await validateSession();
+      if (!stillValid) clearInterval(interval);
+    }, 10000);
+
+    return () => clearInterval(interval);
   }, []);
   const session = demoSession ? { user: demoSession } : null;
   const status = !demoChecked
@@ -581,6 +621,7 @@ export default function AdminLayout({
               <button
                 onClick={() => {
                   document.cookie = "demo-admin-session=; path=/; max-age=0";
+                  document.cookie = "admin-session-token=; path=/; max-age=0";
                   window.location.href = "/admin/login";
                 }}
                 style={{

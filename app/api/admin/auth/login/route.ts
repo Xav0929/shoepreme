@@ -16,5 +16,7 @@ export async function POST(req: NextRequest) {
   if (!staff) return NextResponse.json({ success: false }, { status: 401 });
   const valid = await bcrypt.compare(password, staff.password);
   if (!valid) return NextResponse.json({ success: false }, { status: 401 });
-  return NextResponse.json({ success: true, name: staff.username, role: staff.role });
+  const sessionToken = crypto.randomUUID();
+  await Staff.updateOne({ _id: staff._id }, { sessionToken });
+  return NextResponse.json({ success: true, name: staff.username, role: staff.role, sessionToken });
 }
