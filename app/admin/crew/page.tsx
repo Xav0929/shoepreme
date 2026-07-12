@@ -342,7 +342,26 @@ export default function AdminCrewPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this event? This cannot be undone.")) return;
+    if (!await new Promise<boolean>((resolve) => {
+      const modal = document.createElement("div");
+      modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);z-index:999999;display:flex;align-items:center;justify-content:center;";
+      modal.innerHTML = `
+        <div style="background:#0d1117;border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:32px;width:min(400px,calc(100vw-48px));display:flex;flex-direction:column;gap:20px;">
+          <div>
+            <p style="font-family:monospace;font-size:9px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;color:rgba(248,113,113,0.6);margin:0 0 8px;">Danger Zone</p>
+            <h3 style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:0.05em;color:#f0f4f8;margin:0 0 8px;">Delete Event?</h3>
+            <p style="font-family:monospace;font-size:11px;color:rgba(240,244,248,0.4);margin:0;line-height:1.6;">This action cannot be undone. The event and all its registrations will be permanently removed.</p>
+          </div>
+          <div style="display:flex;gap:10px;">
+            <button id="sp-cancel" style="flex:1;padding:13px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:rgba(240,244,248,0.4);font-family:monospace;font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;">Cancel</button>
+            <button id="sp-confirm" style="flex:1;padding:13px;background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.3);border-radius:10px;color:#f87171;font-family:monospace;font-size:10px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;">Delete</button>
+          </div>
+        </div>`;
+      document.body.appendChild(modal);
+      modal.querySelector("#sp-confirm")!.addEventListener("click", () => { document.body.removeChild(modal); resolve(true); });
+      modal.querySelector("#sp-cancel")!.addEventListener("click", () => { document.body.removeChild(modal); resolve(false); });
+      modal.addEventListener("click", (e) => { if (e.target === modal) { document.body.removeChild(modal); resolve(false); } });
+    })) return;
     setActionLoading(id);
     try {
       const res = await fetch(`/api/admin/crew-events/${id}`, { method: "DELETE" });
