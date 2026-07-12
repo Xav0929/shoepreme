@@ -11,7 +11,14 @@ export async function proxy(request: Request) {
   const { pathname } = url;
 
   // Admin cookie auth
-  if (pathname.startsWith("/admin") && !pathname.startsWith("/admin/login")) {
+  if (
+    (pathname.startsWith("/admin") && !pathname.startsWith("/admin/login")) ||
+    pathname.startsWith("/api/admin") ||
+    pathname.startsWith("/api/fulfill-order") ||
+    pathname.startsWith("/api/hero-slides") ||
+    pathname.startsWith("/api/product-inventory") ||
+    pathname.startsWith("/api/reserve")
+  ) {
     const session = req.cookies.get("demo-admin-session");
     if (!session) {
       return NextResponse.redirect(new URL("/admin/login", req.url));
@@ -27,12 +34,41 @@ export async function proxy(request: Request) {
     return NextResponse.next();
   }
 
+  // Protect account-api routes
+  if (pathname.startsWith("/api/account-api") || pathname.startsWith("/api/paymongo")) {
+    const session = req.cookies.get("__Secure-authjs.session-token") 
+      ?? req.cookies.get("authjs.session-token");
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
+
+  // Protect account-api and paymongo routes
+  if (
+    pathname.startsWith("/api/account-api") ||
+    pathname.startsWith("/api/paymongo")
+  ) {
+    const session =
+      req.cookies.get("__Secure-authjs.session-token") ??
+      req.cookies.get("authjs.session-token");
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
+
   return auth(request as any);
 }
 
 export const config = {
   matcher: [
     "/admin/:path*",
+    "/api/admin/:path*",
+    "/api/fulfill-order/:path*",
+    "/api/hero-slides/:path*",
+    "/api/product-inventory/:path*",
+    "/api/reserve/:path*",
+    "/api/account-api/:path*",
+    "/api/paymongo/:path*",
     "/account",
     "/account/((?!preview|login|signup).*)",
   ],

@@ -208,8 +208,7 @@ export async function GET(request: NextRequest) {
       const { default: mongoose } = await import("mongoose");
       await connectToDatabase();
 
-      delete mongoose.models.CancelRequest;
-      const CancelRequest = mongoose.model(
+      const CancelRequest = mongoose.models.CancelRequest ?? mongoose.model(
         "CancelRequest",
         new mongoose.Schema({
           orderId: String,
