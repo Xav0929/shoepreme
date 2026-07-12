@@ -544,7 +544,7 @@ function OrdersSection({
                 padding: "14px 16px",
                 display: "flex",
                 gap: "12px",
-                alignItems: "center",
+                alignItems: "flex-start",
                 flexWrap: "nowrap",
                 cursor: "pointer",
                 textAlign: "left",
@@ -611,6 +611,7 @@ function OrdersSection({
                     alignItems: "center",
                     gap: "8px",
                     flexWrap: "wrap",
+                    rowGap: "4px",
                     marginBottom: "6px",
                   }}
                 >
@@ -620,6 +621,7 @@ function OrdersSection({
                       fontSize: "1rem",
                       letterSpacing: "0.08em",
                       color: "#f5f7f9",
+                      lineHeight: 1,
                     }}
                   >
                     Order #{order.orderNumber}
@@ -665,6 +667,8 @@ function OrdersSection({
                   alignItems: "center",
                   gap: "6px",
                   flexShrink: 0,
+                  marginLeft: "auto",
+                  paddingTop: "2px",
                 }}
               >
                 <p
@@ -3184,7 +3188,9 @@ function AddressesSection({ customerId }: { customerId: string }) {
   useEffect(() => {
     async function checkSession() {
       try {
-        const res = await fetch(`/api/account-api/check-status?customerId=${encodeURIComponent(customerId)}`);
+        const res = await fetch(
+          `/api/account-api/check-status?customerId=${encodeURIComponent(customerId)}`,
+        );
         const data = await res.json();
         if (data.disabled) {
           const params = new URLSearchParams({ error: "AccountDisabled" });
@@ -3196,9 +3202,13 @@ function AddressesSection({ customerId }: { customerId: string }) {
           form.method = "POST";
           form.action = "/api/auth/signout";
           const cb = document.createElement("input");
-          cb.type = "hidden"; cb.name = "callbackUrl"; cb.value = callbackUrl;
+          cb.type = "hidden";
+          cb.name = "callbackUrl";
+          cb.value = callbackUrl;
           const csrf = document.createElement("input");
-          csrf.type = "hidden"; csrf.name = "csrfToken"; csrf.value = csrfToken;
+          csrf.type = "hidden";
+          csrf.name = "csrfToken";
+          csrf.value = csrfToken;
           form.appendChild(cb);
           form.appendChild(csrf);
           document.body.appendChild(form);
@@ -3778,7 +3788,9 @@ function CancelPreOrderButton({
   useEffect(() => {
     async function checkSession() {
       try {
-        const res = await fetch(`/api/account-api/check-status?customerId=${encodeURIComponent(customerId)}`);
+        const res = await fetch(
+          `/api/account-api/check-status?customerId=${encodeURIComponent(customerId)}`,
+        );
         const data = await res.json();
         if (data.disabled) {
           const params = new URLSearchParams({ error: "AccountDisabled" });
@@ -3790,9 +3802,13 @@ function CancelPreOrderButton({
           form.method = "POST";
           form.action = "/api/auth/signout";
           const cb = document.createElement("input");
-          cb.type = "hidden"; cb.name = "callbackUrl"; cb.value = callbackUrl;
+          cb.type = "hidden";
+          cb.name = "callbackUrl";
+          cb.value = callbackUrl;
           const csrf = document.createElement("input");
-          csrf.type = "hidden"; csrf.name = "csrfToken"; csrf.value = csrfToken;
+          csrf.type = "hidden";
+          csrf.name = "csrfToken";
+          csrf.value = csrfToken;
           form.appendChild(cb);
           form.appendChild(csrf);
           document.body.appendChild(form);
@@ -3988,7 +4004,13 @@ function CancelPreOrderButton({
   );
 }
 
-function PreOrdersSection({ email, customerId }: { email?: string; customerId: string }) {
+function PreOrdersSection({
+  email,
+  customerId,
+}: {
+  email?: string;
+  customerId: string;
+}) {
   const [drafts, setDrafts] = useState<DraftOrder[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -7119,7 +7141,9 @@ export default function AccountClient({
   useEffect(() => {
     async function checkSession() {
       try {
-        const res = await fetch(`/api/account-api/check-status?customerId=${encodeURIComponent(customerId)}`);
+        const res = await fetch(
+          `/api/account-api/check-status?customerId=${encodeURIComponent(customerId)}`,
+        );
         const data = await res.json();
         if (data.disabled) {
           const params = new URLSearchParams({ error: "AccountDisabled" });
@@ -7131,9 +7155,13 @@ export default function AccountClient({
           form.method = "POST";
           form.action = "/api/auth/signout";
           const cb = document.createElement("input");
-          cb.type = "hidden"; cb.name = "callbackUrl"; cb.value = callbackUrl;
+          cb.type = "hidden";
+          cb.name = "callbackUrl";
+          cb.value = callbackUrl;
           const csrf = document.createElement("input");
-          csrf.type = "hidden"; csrf.name = "csrfToken"; csrf.value = csrfToken;
+          csrf.type = "hidden";
+          csrf.name = "csrfToken";
+          csrf.value = csrfToken;
           form.appendChild(cb);
           form.appendChild(csrf);
           document.body.appendChild(form);
@@ -7236,6 +7264,7 @@ export default function AccountClient({
         style={{
           background: "#0d1117",
           borderBottom: "1px solid rgba(255,255,255,0.06)",
+          display: mobileOrdersView ? "none" : undefined,
         }}
       >
         <div
@@ -7626,7 +7655,10 @@ export default function AccountClient({
               <AddressesSection customerId={customerId} />
             )}
             {activeSection === "pre-orders" && (
-              <PreOrdersSection email={liveCustomer.email} customerId={customerId} />
+              <PreOrdersSection
+                email={liveCustomer.email}
+                customerId={customerId}
+              />
             )}
             {activeSection === "the-crew" && (
               <TheCrewSection
@@ -8142,10 +8174,10 @@ export default function AccountClient({
                             background: "rgba(255,255,255,0.02)",
                             border: "1px solid rgba(255,255,255,0.07)",
                             borderRadius: "14px",
-                            padding: "14px 16px",
+                            padding: "12px",
                             display: "flex",
-                            gap: "12px",
-                            alignItems: "center",
+                            gap: "10px",
+                            alignItems: "flex-start",
                             cursor: "pointer",
                             textAlign: "left",
                             width: "100%",
@@ -8200,18 +8232,21 @@ export default function AccountClient({
                                 alignItems: "center",
                                 gap: "6px",
                                 flexWrap: "wrap",
+                                rowGap: "4px",
                                 marginBottom: "5px",
                               }}
                             >
                               <span
                                 style={{
                                   fontFamily: "Bebas Neue, sans-serif",
-                                  fontSize: "1rem",
-                                  letterSpacing: "0.08em",
+                                  fontSize: "0.9rem",
+                                  letterSpacing: "0.06em",
                                   color: "#f5f7f9",
+                                  flexShrink: 0,
+                                  lineHeight: 1,
                                 }}
                               >
-                                Order #{order.orderNumber}
+                                #{order.orderNumber}
                               </span>
                               <StatusBadge label={order.financialStatus} />
                             </div>
@@ -8251,6 +8286,8 @@ export default function AccountClient({
                               alignItems: "center",
                               gap: "4px",
                               flexShrink: 0,
+                              marginLeft: "auto",
+                              paddingTop: "2px",
                             }}
                           >
                             <p

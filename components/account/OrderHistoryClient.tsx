@@ -309,7 +309,7 @@ export default function OrderHistoryClient() {
                   padding: "18px 20px",
                   display: "flex",
                   gap: "16px",
-                  alignItems: "center",
+                  alignItems: "flex-start",
                   flexWrap: "wrap",
                   cursor: "pointer",
                   textAlign: "left",
@@ -377,6 +377,7 @@ export default function OrderHistoryClient() {
                       alignItems: "center",
                       gap: "8px",
                       flexWrap: "wrap",
+                      rowGap: "4px",
                       marginBottom: "6px",
                     }}
                   >
@@ -433,6 +434,8 @@ export default function OrderHistoryClient() {
                     alignItems: "center",
                     gap: "12px",
                     flexShrink: 0,
+                    marginLeft: "auto",
+                    paddingTop: "2px",
                   }}
                 >
                   <p
