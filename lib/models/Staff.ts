@@ -5,6 +5,7 @@ const StaffSchema = new mongoose.Schema({
   password: { type: String, required: true },
   role: { type: String, enum: ["owner", "staff"], default: "staff" },
   sessionToken: { type: String, default: null },
+  sessionTokenCreatedAt: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now },
 });
 

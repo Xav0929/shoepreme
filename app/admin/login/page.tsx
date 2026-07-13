@@ -33,11 +33,7 @@ const res = await fetch("/api/admin/auth/login", {
     });
     const data = await res.json();
     if (data.success) {
-      document.cookie = `demo-admin-session=${encodeURIComponent(
-        JSON.stringify({ name: data.name, role: data.role }),
-      )}; path=/; max-age=86400`;
-      document.cookie = `admin-session-token=${data.sessionToken}; path=/; max-age=86400; SameSite=Strict`;
-      // Small delay to ensure cookie is set before redirect
+      // Cookies are now set server-side with HttpOnly flag
       await new Promise((resolve) => setTimeout(resolve, 100));
       window.location.href = "/admin";
       return;

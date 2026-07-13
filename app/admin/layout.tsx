@@ -245,42 +245,32 @@ export default function AdminLayout({
   } | null>(null);
   const [demoChecked, setDemoChecked] = useState(false);
   useEffect(() => {
-    const match = document.cookie.match(/demo-admin-session=([^;]+)/);
-    const tokenMatch = document.cookie.match(/admin-session-token=([^;]+)/);
-
-    if (!match || !tokenMatch) {
-      setDemoChecked(true);
-      return;
-    }
-
-    const sessionToken = tokenMatch[1];
+    if (pathname === "/admin/login") return;
 
     async function validateSession() {
       try {
-        const r = await fetch("/api/admin/auth/validate", {
+        const r = await fetch("/api/admin/validate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionToken }),
+          body: JSON.stringify({}),
         });
         const data = await r.json();
         if (!data.valid) {
           document.cookie = "demo-admin-session=; path=/; max-age=0";
           document.cookie = "admin-session-token=; path=/; max-age=0";
           window.location.href = "/admin/login";
-          return false;
+          return null;
         }
-        return true;
+        return { name: data.name ?? "Admin", role: data.role ?? "owner" };
       } catch {
-        return true; // DB unreachable — allow through
+        return { name: "Admin", role: "owner" }; // DB unreachable — allow through
       }
     }
 
     // Initial check
-    validateSession().then((valid) => {
-      if (valid) {
-        try {
-          setDemoSession(JSON.parse(decodeURIComponent(match[1])));
-        } catch {}
+    validateSession().then((result) => {
+      if (result) {
+        setDemoSession(result);
       }
       setDemoChecked(true);
     });
@@ -619,9 +609,8 @@ export default function AdminLayout({
                 {role === "owner" ? "Owner" : "Staff"}
               </span>
               <button
-                onClick={() => {
-                  document.cookie = "demo-admin-session=; path=/; max-age=0";
-                  document.cookie = "admin-session-token=; path=/; max-age=0";
+                onClick={async () => {
+                  await fetch("/api/admin/auth/logout", { method: "POST" });
                   window.location.href = "/admin/login";
                 }}
                 style={{
