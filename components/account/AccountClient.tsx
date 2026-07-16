@@ -552,6 +552,7 @@ function OrdersSection({
                 transition: "border-color 0.15s, background 0.15s",
                 boxSizing: "border-box",
                 overflow: "hidden",
+                minHeight: "76px",
               }}
               onMouseEnter={(e) => {
                 (e.currentTarget as HTMLButtonElement).style.borderColor =
@@ -585,6 +586,8 @@ function OrdersSection({
                   <img
                     src={firstImage}
                     alt=""
+                    loading="eager"
+                    decoding="async"
                     style={{
                       width: "100%",
                       height: "100%",
@@ -7230,8 +7233,7 @@ export default function AccountClient({
           .account-outer { padding: 0 !important; width: 100% !important; overflow: hidden !important; }
         }
         @media (min-width: 769px) {
-          .account-sidebar { position: fixed !important; top: 80px !important; left: calc((100vw - 1280px) / 2 + 32px) !important; width: 240px !important; height: calc(100vh - 80px) !important; overflow-y: auto !important; z-index: 10 !important; }
-          .account-content { margin-left: 240px !important; }
+          .account-sidebar { position: sticky !important; top: 80px !important; align-self: flex-start !important; max-height: calc(100vh - 80px) !important; overflow-y: auto !important; }
         }
       `}</style>
 
@@ -8160,6 +8162,7 @@ export default function AccountClient({
                             width: "100%",
                             boxSizing: "border-box",
                             overflow: "hidden",
+                            minHeight: "72px",
                           }}
                         >
                           <div
@@ -8181,6 +8184,8 @@ export default function AccountClient({
                               <img
                                 src={firstImage}
                                 alt=""
+                                loading="eager"
+                                decoding="async"
                                 style={{
                                   width: "100%",
                                   height: "100%",
