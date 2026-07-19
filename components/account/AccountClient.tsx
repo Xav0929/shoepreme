@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 // signOut import removed — using redirect instead
 import { createPortal } from "react-dom";
 
 const SHOP_LOCATION = {
-  lat: 6.1164,
-  lng: 125.1716,
+  lat: 6.1373575,
+  lng: 125.188662,
   name: "Shoepreme",
   address: "Conel - Olympog Rd, General Santos City, South Cotabato",
 };
@@ -2300,6 +2300,41 @@ function TrackOrderSidebar({
   } | null>(null);
   const [locationDenied, setLocationDenied] = useState(false);
 
+  // Drag-to-scroll for the order tab pill row
+  const tabScrollRef = useRef<HTMLDivElement>(null);
+  const dragState = useRef({
+    isDown: false,
+    startX: 0,
+    startScroll: 0,
+    moved: false,
+  });
+
+  function handleTabPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    const el = tabScrollRef.current;
+    if (!el) return;
+    dragState.current = {
+      isDown: true,
+      startX: e.clientX,
+      startScroll: el.scrollLeft,
+      moved: false,
+    };
+    el.setPointerCapture(e.pointerId);
+  }
+
+  function handleTabPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    const el = tabScrollRef.current;
+    if (!el || !dragState.current.isDown) return;
+    const dx = e.clientX - dragState.current.startX;
+    if (Math.abs(dx) > 3) dragState.current.moved = true;
+    el.scrollLeft = dragState.current.startScroll - dx;
+  }
+
+  function handleTabPointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    const el = tabScrollRef.current;
+    dragState.current.isDown = false;
+    if (el) el.releasePointerCapture(e.pointerId);
+  }
+
   useEffect(() => {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
@@ -2472,46 +2507,75 @@ function TrackOrderSidebar({
         {orders.length > 1 && (
           <div
             style={{
-              padding: "10px 24px",
+              position: "relative",
               borderBottom: "1px solid rgba(255,255,255,0.06)",
-              display: "flex",
-              gap: "6px",
-              overflowX: "auto",
-              scrollbarWidth: "none",
               flexShrink: 0,
             }}
           >
-            {orders.map((o) => {
-              const isSelected = o.id === order.id;
-              return (
-                <button
-                  key={o.id}
-                  onClick={() => setOrder(o)}
-                  style={{
-                    flexShrink: 0,
-                    padding: "5px 12px",
-                    borderRadius: "20px",
-                    border: isSelected
-                      ? "1px solid rgba(232,168,48,0.5)"
-                      : "1px solid rgba(255,255,255,0.08)",
-                    background: isSelected
-                      ? "rgba(232,168,48,0.1)"
-                      : "transparent",
-                    color: isSelected ? "#e8a830" : "rgba(245,247,249,0.35)",
-                    fontFamily: "monospace",
-                    fontSize: "9px",
-                    fontWeight: 700,
-                    letterSpacing: "0.1em",
-                    textTransform: "uppercase",
-                    cursor: "pointer",
-                    whiteSpace: "nowrap",
-                    transition: "all 0.15s",
-                  }}
-                >
-                  #{o.orderNumber}
-                </button>
-              );
-            })}
+            <div
+              ref={tabScrollRef}
+              onPointerDown={handleTabPointerDown}
+              onPointerMove={handleTabPointerMove}
+              onPointerUp={handleTabPointerUp}
+              onPointerLeave={handleTabPointerUp}
+              style={{
+                padding: "10px 24px",
+                display: "flex",
+                gap: "6px",
+                overflowX: "auto",
+                scrollbarWidth: "none",
+                scrollSnapType: "x mandatory",
+                cursor: "grab",
+                userSelect: "none",
+              }}
+            >
+              {orders.map((o) => {
+                const isSelected = o.id === order.id;
+                return (
+                  <button
+                    key={o.id}
+                    onClick={() => {
+                      if (dragState.current.moved) return;
+                      setOrder(o);
+                    }}
+                    style={{
+                      flexShrink: 0,
+                      padding: "5px 12px",
+                      borderRadius: "20px",
+                      border: isSelected
+                        ? "1px solid rgba(232,168,48,0.5)"
+                        : "1px solid rgba(255,255,255,0.08)",
+                      background: isSelected
+                        ? "rgba(232,168,48,0.1)"
+                        : "transparent",
+                      color: isSelected ? "#e8a830" : "rgba(245,247,249,0.35)",
+                      fontFamily: "monospace",
+                      fontSize: "9px",
+                      fontWeight: 700,
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                      transition: "all 0.15s",
+                      scrollSnapAlign: "start",
+                    }}
+                  >
+                    #{o.orderNumber}
+                  </button>
+                );
+              })}
+            </div>
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                right: 0,
+                bottom: 0,
+                width: "28px",
+                background: "linear-gradient(to right, transparent, #0d1117)",
+                pointerEvents: "none",
+              }}
+            />
           </div>
         )}
         <div style={{ flex: 1, overflowY: "auto" }}>
