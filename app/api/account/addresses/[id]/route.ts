@@ -8,19 +8,20 @@ import {
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await auth();
   if (!session?.shopifyAccessToken) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
   const body = await req.json();
+  const { id } = await params;
 
   try {
     if (body.setDefaultOnly) {
       const customer = await setDefaultCustomerAddress(
         session.shopifyAccessToken,
-        decodeURIComponent(params.id),
+        decodeURIComponent(id),
       );
       return NextResponse.json({ customer });
     }
@@ -28,7 +29,7 @@ export async function PATCH(
     const { setDefault, ...input } = body;
     const address = await updateCustomerAddress(
       session.shopifyAccessToken,
-      decodeURIComponent(params.id),
+      decodeURIComponent(id),
       input,
       !!setDefault,
     );
@@ -40,16 +41,17 @@ export async function PATCH(
 
 export async function DELETE(
   _req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await auth();
   if (!session?.shopifyAccessToken) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
+  const { id } = await params;
   try {
     const deletedId = await deleteCustomerAddress(
       session.shopifyAccessToken,
-      decodeURIComponent(params.id),
+      decodeURIComponent(id),
     );
     return NextResponse.json({ deletedId });
   } catch (err: any) {
