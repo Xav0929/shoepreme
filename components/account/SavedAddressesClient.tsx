@@ -1,49 +1,51 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const MOCK_ADDRESSES = [
-  {
-    id: "addr_1",
-    firstName: "Marc",
-    lastName: "Yuri",
-    address1: "123 Rizal St.",
-    address2: "Brgy. Poblacion",
-    city: "Koronadal",
-    province: "South Cotabato",
-    zip: "9506",
-    country: "Philippines",
-    phone: "+639123456789",
-    isDefault: true,
-  },
-  {
-    id: "addr_2",
-    firstName: "Marc",
-    lastName: "Yuri",
-    address1: "456 Mabini Ave.",
-    address2: "",
-    city: "General Santos",
-    province: "South Cotabato",
-    zip: "9500",
-    country: "Philippines",
-    phone: "+639123456789",
-    isDefault: false,
-  },
-];
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface Address {
+  id: string;
+  firstName: string;
+  lastName: string;
+  address1: string;
+  address2: string;
+  city: string;
+  province: string; // maps to zoneCode — see note in AddressFormModal
+  zip: string;
+  country: string; // always "Philippines" for now — territoryCode "PH" sent to API
+  phone: string;
+  isDefault: boolean;
+}
 
-type Address = (typeof MOCK_ADDRESSES)[number];
+// Maps a raw Customer Account API address node to our local shape
+function fromApiAddress(node: any, defaultId: string | undefined): Address {
+  return {
+    id: node.id,
+    firstName: node.firstName ?? "",
+    lastName: node.lastName ?? "",
+    address1: node.address1 ?? "",
+    address2: node.address2 ?? "",
+    city: node.city ?? "",
+    province: node.zoneCode ?? "",
+    zip: node.zip ?? "",
+    country: "Philippines",
+    phone: node.phoneNumber ?? "",
+    isDefault: node.id === defaultId,
+  };
+}
 
 // ─── Address Form Modal ───────────────────────────────────────────────────────
 function AddressFormModal({
   address,
   onClose,
   onSave,
+  saving,
 }: {
   address: Address | null;
   onClose: () => void;
   onSave: (data: Omit<Address, "id" | "isDefault">) => void;
+  saving: boolean;
 }) {
   const [form, setForm] = useState({
     firstName: address?.firstName ?? "",
@@ -276,10 +278,9 @@ function AddressFormModal({
             <div>
               <label style={labelStyle}>Country</label>
               <input
-                style={inputStyle}
+                style={{ ...inputStyle, opacity: 0.5 }}
                 value={form.country}
-                onChange={(e) => setForm({ ...form, country: e.target.value })}
-                placeholder="Philippines"
+                disabled
               />
             </div>
           </div>
@@ -307,6 +308,7 @@ function AddressFormModal({
         >
           <button
             onClick={onClose}
+            disabled={saving}
             style={{
               flex: 1,
               padding: "13px",
@@ -319,16 +321,14 @@ function AddressFormModal({
               fontWeight: 700,
               letterSpacing: "0.14em",
               textTransform: "uppercase",
-              cursor: "pointer",
+              cursor: saving ? "default" : "pointer",
             }}
           >
             Cancel
           </button>
           <button
-            onClick={() => {
-              onSave(form);
-              onClose();
-            }}
+            onClick={() => onSave(form)}
+            disabled={saving}
             style={{
               flex: 2,
               padding: "13px",
@@ -341,10 +341,11 @@ function AddressFormModal({
               fontWeight: 700,
               letterSpacing: "0.2em",
               textTransform: "uppercase",
-              cursor: "pointer",
+              cursor: saving ? "default" : "pointer",
+              opacity: saving ? 0.6 : 1,
             }}
           >
-            {isEditing ? "Save Changes" : "Add Address"}
+            {saving ? "Saving..." : isEditing ? "Save Changes" : "Add Address"}
           </button>
         </div>
       </div>
@@ -356,9 +357,11 @@ function AddressFormModal({
 function DeleteConfirmModal({
   onClose,
   onConfirm,
+  deleting,
 }: {
   onClose: () => void;
   onConfirm: () => void;
+  deleting: boolean;
 }) {
   return (
     <>
@@ -440,6 +443,7 @@ function DeleteConfirmModal({
         <div style={{ display: "flex", gap: "10px" }}>
           <button
             onClick={onClose}
+            disabled={deleting}
             style={{
               flex: 1,
               padding: "12px",
@@ -452,16 +456,14 @@ function DeleteConfirmModal({
               fontWeight: 700,
               letterSpacing: "0.12em",
               textTransform: "uppercase",
-              cursor: "pointer",
+              cursor: deleting ? "default" : "pointer",
             }}
           >
             Cancel
           </button>
           <button
-            onClick={() => {
-              onConfirm();
-              onClose();
-            }}
+            onClick={onConfirm}
+            disabled={deleting}
             style={{
               flex: 1,
               padding: "12px",
@@ -474,10 +476,11 @@ function DeleteConfirmModal({
               fontWeight: 700,
               letterSpacing: "0.12em",
               textTransform: "uppercase",
-              cursor: "pointer",
+              cursor: deleting ? "default" : "pointer",
+              opacity: deleting ? 0.6 : 1,
             }}
           >
-            Remove
+            {deleting ? "Removing..." : "Remove"}
           </button>
         </div>
       </div>
@@ -487,45 +490,130 @@ function DeleteConfirmModal({
 
 // ─── Main Export ──────────────────────────────────────────────────────────────
 export default function SavedAddressesClient() {
-  const [addresses, setAddresses] = useState(MOCK_ADDRESSES);
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [editingAddress, setEditingAddress] = useState<
     Address | null | undefined
   >(undefined); // undefined = closed, null = new
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  function handleSave(data: Omit<Address, "id" | "isDefault">) {
-    if (editingAddress === null) {
-      // Add new
-      setAddresses((prev) => [
-        ...prev,
-        { ...data, id: `addr_${Date.now()}`, isDefault: prev.length === 0 },
-      ]);
-    } else if (editingAddress) {
-      // Update existing
-      setAddresses((prev) =>
-        prev.map((a) => (a.id === editingAddress.id ? { ...a, ...data } : a)),
+  const loadAddresses = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const res = await fetch("/api/account/addresses");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to load addresses");
+      setAddresses(
+        data.addresses.map((a: any) => fromApiAddress(a, undefined)),
       );
+      // API already flags isDefault server-side via getCustomerAddresses
+      setAddresses(data.addresses);
+    } catch (err: any) {
+      setLoadError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadAddresses();
+  }, [loadAddresses]);
+
+  async function handleSave(data: Omit<Address, "id" | "isDefault">) {
+    setSaving(true);
+    try {
+      const payload = {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        address1: data.address1,
+        address2: data.address2,
+        city: data.city,
+        zip: data.zip,
+        zoneCode: data.province,
+        territoryCode: "PH",
+        phoneNumber: data.phone,
+      };
+
+      if (editingAddress === null) {
+        // Add new
+        const res = await fetch("/api/account/addresses", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...payload,
+            setDefault: addresses.length === 0,
+          }),
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || "Failed to add address");
+      } else if (editingAddress) {
+        const res = await fetch(
+          `/api/account/addresses/${encodeURIComponent(editingAddress.id)}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          },
+        );
+        const result = await res.json();
+        if (!res.ok)
+          throw new Error(result.error || "Failed to update address");
+      }
+
+      setEditingAddress(undefined);
+      await loadAddresses();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setSaving(false);
     }
   }
 
-  function handleDelete(id: string) {
-    setAddresses((prev) => {
-      const filtered = prev.filter((a) => a.id !== id);
-      // If deleted was default, make first one default
-      if (filtered.length > 0 && !filtered.some((a) => a.isDefault)) {
-        filtered[0].isDefault = true;
-      }
-      return filtered;
-    });
+  async function handleDelete(id: string) {
+    setDeleting(true);
+    try {
+      const res = await fetch(
+        `/api/account/addresses/${encodeURIComponent(id)}`,
+        {
+          method: "DELETE",
+        },
+      );
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Failed to delete address");
+      setDeletingId(null);
+      await loadAddresses();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setDeleting(false);
+    }
   }
 
-  function handleSetDefault(id: string) {
-    setAddresses((prev) => prev.map((a) => ({ ...a, isDefault: a.id === id })));
+  async function handleSetDefault(id: string) {
+    try {
+      const res = await fetch(
+        `/api/account/addresses/${encodeURIComponent(id)}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ setDefaultOnly: true }),
+        },
+      );
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Failed to set default");
+      await loadAddresses();
+    } catch (err: any) {
+      alert(err.message);
+    }
   }
 
   return (
@@ -584,8 +672,34 @@ export default function SavedAddressesClient() {
         </button>
       </div>
 
+      {loading && (
+        <p
+          style={{
+            fontFamily: "monospace",
+            fontSize: "10px",
+            color: "rgba(245,247,249,0.3)",
+            letterSpacing: "0.08em",
+          }}
+        >
+          Loading addresses...
+        </p>
+      )}
+
+      {loadError && (
+        <p
+          style={{
+            fontFamily: "monospace",
+            fontSize: "10px",
+            color: "#f87171",
+            letterSpacing: "0.04em",
+          }}
+        >
+          {loadError}
+        </p>
+      )}
+
       {/* Address cards */}
-      {addresses.length === 0 ? (
+      {!loading && !loadError && addresses.length === 0 ? (
         <div
           style={{
             background: "rgba(255,255,255,0.02)",
@@ -640,154 +754,173 @@ export default function SavedAddressesClient() {
           </button>
         </div>
       ) : (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-            gap: "12px",
-          }}
-        >
-          {addresses.map((addr) => (
-            <div
-              key={addr.id}
-              style={{
-                background: "rgba(255,255,255,0.02)",
-                border: `1px solid ${addr.isDefault ? "rgba(232,168,48,0.3)" : "rgba(255,255,255,0.07)"}`,
-                borderRadius: "14px",
-                padding: "18px 20px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "12px",
-                position: "relative",
-              }}
-            >
-              {/* Default badge */}
-              {addr.isDefault && (
-                <span
-                  style={{
-                    position: "absolute",
-                    top: "14px",
-                    right: "14px",
-                    fontFamily: "monospace",
-                    fontSize: "8px",
-                    fontWeight: 800,
-                    letterSpacing: "0.16em",
-                    textTransform: "uppercase",
-                    color: "#e8a830",
-                    background: "rgba(232,168,48,0.1)",
-                    border: "1px solid rgba(232,168,48,0.25)",
-                    borderRadius: "4px",
-                    padding: "2px 7px",
-                  }}
-                >
-                  Default
-                </span>
-              )}
-
-              {/* Address info */}
+        !loading &&
+        !loadError && (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+              gap: "12px",
+            }}
+          >
+            {addresses.map((addr) => (
               <div
+                key={addr.id}
                 style={{
+                  background: "rgba(255,255,255,0.02)",
+                  border: `1px solid ${addr.isDefault ? "rgba(232,168,48,0.3)" : "rgba(255,255,255,0.07)"}`,
+                  borderRadius: "14px",
+                  padding: "18px 20px",
                   display: "flex",
-                  gap: "10px",
-                  alignItems: "flex-start",
+                  flexDirection: "column",
+                  gap: "12px",
+                  position: "relative",
                 }}
               >
+                {addr.isDefault && (
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: "14px",
+                      right: "14px",
+                      fontFamily: "monospace",
+                      fontSize: "8px",
+                      fontWeight: 800,
+                      letterSpacing: "0.16em",
+                      textTransform: "uppercase",
+                      color: "#e8a830",
+                      background: "rgba(232,168,48,0.1)",
+                      border: "1px solid rgba(232,168,48,0.25)",
+                      borderRadius: "4px",
+                      padding: "2px 7px",
+                    }}
+                  >
+                    Default
+                  </span>
+                )}
+
                 <div
                   style={{
-                    width: "32px",
-                    height: "32px",
-                    borderRadius: "8px",
-                    background: "rgba(74,127,165,0.1)",
-                    border: "1px solid rgba(74,127,165,0.15)",
                     display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                    marginTop: "1px",
+                    gap: "10px",
+                    alignItems: "flex-start",
                   }}
                 >
-                  <svg
-                    width="13"
-                    height="13"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#4a7fa5"
-                    strokeWidth="2"
+                  <div
+                    style={{
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "8px",
+                      background: "rgba(74,127,165,0.1)",
+                      border: "1px solid rgba(74,127,165,0.15)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                      marginTop: "1px",
+                    }}
                   >
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
-                    <circle cx="12" cy="10" r="3" />
-                  </svg>
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#4a7fa5"
+                      strokeWidth="2"
+                    >
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p
+                      style={{
+                        fontFamily: "Poppins, sans-serif",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        color: "#f5f7f9",
+                        margin: "0 0 4px",
+                        paddingRight: addr.isDefault ? "60px" : "0",
+                      }}
+                    >
+                      {addr.firstName} {addr.lastName}
+                    </p>
+                    <p
+                      style={{
+                        fontFamily: "monospace",
+                        fontSize: "10px",
+                        color: "rgba(245,247,249,0.4)",
+                        margin: "0 0 2px",
+                        letterSpacing: "0.03em",
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {addr.address1}
+                      {addr.address2 ? `, ${addr.address2}` : ""}
+                    </p>
+                    <p
+                      style={{
+                        fontFamily: "monospace",
+                        fontSize: "10px",
+                        color: "rgba(245,247,249,0.4)",
+                        margin: "0 0 2px",
+                        letterSpacing: "0.03em",
+                      }}
+                    >
+                      {addr.city}, {addr.province} {addr.zip}
+                    </p>
+                    <p
+                      style={{
+                        fontFamily: "monospace",
+                        fontSize: "10px",
+                        color: "rgba(245,247,249,0.3)",
+                        margin: 0,
+                        letterSpacing: "0.03em",
+                      }}
+                    >
+                      {addr.phone}
+                    </p>
+                  </div>
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p
-                    style={{
-                      fontFamily: "Poppins, sans-serif",
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      color: "#f5f7f9",
-                      margin: "0 0 4px",
-                      paddingRight: addr.isDefault ? "60px" : "0",
-                    }}
-                  >
-                    {addr.firstName} {addr.lastName}
-                  </p>
-                  <p
-                    style={{
-                      fontFamily: "monospace",
-                      fontSize: "10px",
-                      color: "rgba(245,247,249,0.4)",
-                      margin: "0 0 2px",
-                      letterSpacing: "0.03em",
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    {addr.address1}
-                    {addr.address2 ? `, ${addr.address2}` : ""}
-                  </p>
-                  <p
-                    style={{
-                      fontFamily: "monospace",
-                      fontSize: "10px",
-                      color: "rgba(245,247,249,0.4)",
-                      margin: "0 0 2px",
-                      letterSpacing: "0.03em",
-                    }}
-                  >
-                    {addr.city}, {addr.province} {addr.zip}
-                  </p>
-                  <p
-                    style={{
-                      fontFamily: "monospace",
-                      fontSize: "10px",
-                      color: "rgba(245,247,249,0.3)",
-                      margin: 0,
-                      letterSpacing: "0.03em",
-                    }}
-                  >
-                    {addr.phone}
-                  </p>
-                </div>
-              </div>
 
-              {/* Actions */}
-              <div
-                style={{
-                  display: "flex",
-                  gap: "8px",
-                  borderTop: "1px solid rgba(255,255,255,0.05)",
-                  paddingTop: "12px",
-                }}
-              >
-                {!addr.isDefault && (
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "8px",
+                    borderTop: "1px solid rgba(255,255,255,0.05)",
+                    paddingTop: "12px",
+                  }}
+                >
+                  {!addr.isDefault && (
+                    <button
+                      onClick={() => handleSetDefault(addr.id)}
+                      style={{
+                        flex: 1,
+                        padding: "8px",
+                        background: "transparent",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                        borderRadius: "7px",
+                        color: "rgba(245,247,249,0.35)",
+                        fontFamily: "monospace",
+                        fontSize: "8px",
+                        fontWeight: 700,
+                        letterSpacing: "0.14em",
+                        textTransform: "uppercase",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Set Default
+                    </button>
+                  )}
                   <button
-                    onClick={() => handleSetDefault(addr.id)}
+                    onClick={() => setEditingAddress(addr)}
                     style={{
                       flex: 1,
                       padding: "8px",
-                      background: "transparent",
-                      border: "1px solid rgba(255,255,255,0.08)",
+                      background: "rgba(74,127,165,0.08)",
+                      border: "1px solid rgba(74,127,165,0.2)",
                       borderRadius: "7px",
-                      color: "rgba(245,247,249,0.35)",
+                      color: "#4a7fa5",
                       fontFamily: "monospace",
                       fontSize: "8px",
                       fontWeight: 700,
@@ -796,63 +929,44 @@ export default function SavedAddressesClient() {
                       cursor: "pointer",
                     }}
                   >
-                    Set Default
+                    Edit
                   </button>
-                )}
-                <button
-                  onClick={() => setEditingAddress(addr)}
-                  style={{
-                    flex: 1,
-                    padding: "8px",
-                    background: "rgba(74,127,165,0.08)",
-                    border: "1px solid rgba(74,127,165,0.2)",
-                    borderRadius: "7px",
-                    color: "#4a7fa5",
-                    fontFamily: "monospace",
-                    fontSize: "8px",
-                    fontWeight: 700,
-                    letterSpacing: "0.14em",
-                    textTransform: "uppercase",
-                    cursor: "pointer",
-                  }}
-                >
-                  Edit
-                </button>
-                {!addr.isDefault && (
-                  <button
-                    onClick={() => setDeletingId(addr.id)}
-                    style={{
-                      width: "34px",
-                      padding: "8px",
-                      background: "rgba(248,113,113,0.06)",
-                      border: "1px solid rgba(248,113,113,0.15)",
-                      borderRadius: "7px",
-                      color: "#f87171",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <svg
-                      width="11"
-                      height="11"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
+                  {!addr.isDefault && (
+                    <button
+                      onClick={() => setDeletingId(addr.id)}
+                      style={{
+                        width: "34px",
+                        padding: "8px",
+                        background: "rgba(248,113,113,0.06)",
+                        border: "1px solid rgba(248,113,113,0.15)",
+                        borderRadius: "7px",
+                        color: "#f87171",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
                     >
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" />
-                    </svg>
-                  </button>
-                )}
+                      <svg
+                        width="11"
+                        height="11"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      >
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )
       )}
 
       {/* Portals */}
@@ -863,6 +977,7 @@ export default function SavedAddressesClient() {
             address={editingAddress}
             onClose={() => setEditingAddress(undefined)}
             onSave={handleSave}
+            saving={saving}
           />,
           document.body,
         )}
@@ -873,6 +988,7 @@ export default function SavedAddressesClient() {
           <DeleteConfirmModal
             onClose={() => setDeletingId(null)}
             onConfirm={() => handleDelete(deletingId)}
+            deleting={deleting}
           />,
           document.body,
         )}

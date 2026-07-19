@@ -51,7 +51,10 @@ export default async function AccountPage() {
           phone: c.phoneNumber?.phoneNumber,
         };
       }
-    } catch (err) {
+    } catch (err: any) {
+      if (err?.message?.includes("401")) {
+        redirect("/account/login?error=SessionExpired");
+      }
       console.error("Failed to fetch customer from Customer Account API", err);
     }
   }
@@ -169,7 +172,10 @@ export default async function AccountPage() {
           })),
         },
       }));
-    } catch (err) {
+    } catch (err: any) {
+      if (err?.message?.includes("401")) {
+        redirect("/account/login?error=SessionExpired");
+      }
       console.error("Failed to fetch orders server-side", err);
     }
   }

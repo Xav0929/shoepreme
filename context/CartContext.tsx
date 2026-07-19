@@ -82,18 +82,33 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Sync buyer email onto the cart once we know who's logged in
+  // Sync buyer email + Shopify customer access token onto the cart once we know who's logged in
   useEffect(() => {
     const email = session?.user?.email;
+    const customerAccessToken = (session as any)?.shopifyAccessToken;
     if (!email || !cart?.id) return;
-    updateCartBuyerIdentity(cart.id, email)
+    console.log(
+      "[buyerIdentity] email:",
+      email,
+      "hasToken:",
+      !!customerAccessToken,
+      "tokenPreview:",
+      customerAccessToken?.slice?.(0, 15),
+    );
+    updateCartBuyerIdentity(cart.id, email, customerAccessToken)
       .then((updated) => {
+        console.log(
+          "[buyerIdentity] updated cart checkoutUrl:",
+          updated?.checkoutUrl,
+        );
         if (updated) setCart(updated);
       })
-      .catch(() => {});
-    // only re-run when cart id or email changes, not on every cart update
+      .catch((err) => {
+        console.error("[buyerIdentity] failed:", err);
+      });
+    // only re-run when cart id, email, or token changes, not on every cart update
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cart?.id, session?.user?.email]);
+  }, [cart?.id, session?.user?.email, (session as any)?.shopifyAccessToken]);
 
   const addToCart = useCallback(
     async (merchandiseId: string, quantity = 1, openCartAfter = true) => {

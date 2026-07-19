@@ -219,7 +219,11 @@ export async function getCart(cartId: string) {
   return data?.cart;
 }
 
-export async function updateCartBuyerIdentity(cartId: string, email: string) {
+export async function updateCartBuyerIdentity(
+  cartId: string,
+  email: string,
+  customerAccessToken?: string,
+) {
   const mutation = `
     ${CART_FRAGMENT}
     mutation CartBuyerIdentityUpdate($cartId: ID!, $buyerIdentity: CartBuyerIdentityInput!) {
@@ -230,7 +234,14 @@ export async function updateCartBuyerIdentity(cartId: string, email: string) {
     }
   `;
   const { data, errors } = await shopifyClient.request(mutation, {
-    variables: { cartId, buyerIdentity: { email, countryCode: "PH" } },
+    variables: {
+      cartId,
+      buyerIdentity: {
+        email,
+        countryCode: "PH",
+        ...(customerAccessToken ? { customerAccessToken } : {}),
+      },
+    },
   });
   if (errors) throw new Error(JSON.stringify(errors));
   return data?.cartBuyerIdentityUpdate?.cart;
